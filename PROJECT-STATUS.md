@@ -8,9 +8,7 @@ Secrets: None stored here
 ## What exists
 
 A Kotlin/Jetpack Compose Android app targeting the Mudita Kompakt, built per
-`sensi-client-spec.md`. Three commits: `1033b55` (initial scaffold), `1a22908`
-(this documentation), `7f370f5` (periodic-refresh fix, see below). Working
-tree clean.
+`sensi-client-spec.md`. Six commits, latest `78cf7d7`. Working tree clean.
 
 - **Protocol layer** (`app/src/main/java/com/chad/sensieink/data/`):
   `SensiAuthClient` (OAuth refresh_token grant), `SensiRealtimeClient`
@@ -18,11 +16,24 @@ tree clean.
   (EncryptedSharedPreferences), `ThermostatState`/`ThermostatRepository`
   (parsing + UI-facing state with committed/pending separation), `DeviceId`
   (EUI-64 derivation).
-- **UI** (`app/src/main/java/com/chad/sensieink/ui/`): `SetupScreen` (token
-  entry, gates the rest of the app until a refresh_token is stored),
-  `CurrentStateScreen`, `SetpointScreen`, `ModeScreen`, `FanScreen`, all built
+- **UI** (`app/src/main/java/com/chad/sensieink/ui/`): `SetupScreen` (a 6-step
+  paged onboarding walkthrough for harvesting a refresh_token, gates the rest
+  of the app until one is stored), `CurrentStateScreen`, `SetpointScreen`,
+  `ModeScreen`, `FanScreen`, `SettingsScreen` (app version, temperature unit
+  toggle, "Update refresh_token" to get back to `SetupScreen`), all built
   from MMD components (`ButtonMMD`, `TextMMD`, `CardMMD`, `TopAppBarMMD`,
-  `NavigationBarMMD`).
+  `NavigationBarMMD` with 5 tabs).
+- **Remote config** (`data/RemoteConfig.kt`, `BuildConfig.CONFIG_URL`): fetches
+  `docs/config.json` from this repo's GitHub raw/Pages URLs at launch for an
+  optional broadcast message or update nudge, mirroring the pattern already
+  used in `TripTime`. **Inert until this repo has a GitHub remote and that
+  file exists** - every failure is swallowed by design, so this was verified
+  as "fails silently, no crash, no notice shown" rather than "shows a real
+  notice." Revisit once a remote exists.
+- **Temperature unit preference** (`data/PreferencesStore.kt`, DataStore):
+  Fahrenheit/Celsius/Kelvin, display-only - the wire protocol and the
+  setpoint +/- step stay whole-degree Fahrenheit regardless of the selected
+  display unit. Verified persists across an app restart.
 - **Build**: `./gradlew assembleDebug` succeeds
   (`app/build/outputs/apk/debug/app-debug.apk` produced 2026-08-31). Toolchain
   mirrors `KompaktAudioProbe` (a known-working sibling project): Gradle 9.5.0,
@@ -106,6 +117,14 @@ sessions rather than re-discovering.
   by wrapping each connection cycle in a 30s timeout and reconnecting when it
   elapses; confirmed a fresh update now arrives automatically (~30-35s)
   without any manual app restart.
+- **Settings screen (`78cf7d7`) verified**: the 5th nav tab is reachable,
+  shows the real `BuildConfig.VERSION_NAME`, the Fahrenheit/Celsius/Kelvin
+  toggle converts `CurrentStateScreen`/`SetpointScreen` display and survives
+  an app restart (DataStore), and "Update refresh_token" correctly routes
+  back to `SetupScreen` — re-pasting a token there reconnects live again.
+  Confirmed the setpoint +/- still steps in real whole-degree Fahrenheit
+  regardless of display unit (another live round trip against the real
+  thermostat, reverted afterward).
 
 ## Not yet done
 
@@ -120,13 +139,19 @@ sessions rather than re-discovering.
 - No app icon beyond a placeholder vector glyph.
 - Not registered with a git remote — local-only, matching the deliberate
   choice made when this repo was initialized (see `rowdyram-ops` conventions:
-  remotes need separate explicit approval).
+  remotes need separate explicit approval). This also means remote config
+  (`BuildConfig.CONFIG_URL`) has nothing to fetch yet — see above.
 
 ## Exact next action
 
 1. Physical-Kompakt pass per the shared device test matrix (ghosting, touch
-   targets, contrast, sleep/wake) before considering the four-screen
+   targets, contrast, sleep/wake) before considering the four/five-screen
    milestone complete.
 2. Consider surfacing a `capabilities` event listener to replace the
    hardcoded Mode-screen mode list, now that a live socket connection is
    proven to work.
+3. Once this repo has a GitHub remote: add `docs/config.json` (schema:
+   `{"message": "...", "latestVersion": "..."}`, both optional) and enable
+   GitHub Pages from `/docs` to light up the second fallback URL too, then
+   verify a real notice actually renders (only the silent-failure path has
+   been tested so far).
