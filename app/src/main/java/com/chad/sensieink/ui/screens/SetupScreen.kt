@@ -4,21 +4,32 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.chad.sensieink.data.PairingServer
 import com.mudita.mmd.components.buttons.ButtonMMD
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
+import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
+import fi.iki.elonen.NanoHTTPD
+import kotlinx.coroutines.launch
 
 private data class OnboardingStep(val title: String, val body: String)
 
@@ -78,6 +89,12 @@ fun SetupScreen(onTokenSaved: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // Without these, the keyboard covered the Save/Next button on
+            // the physical Kompakt instead of the layout making room for
+            // it - not visible on the emulator, whose window doesn't show
+            // a software keyboard the same way.
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -98,14 +115,10 @@ fun SetupScreen(onTokenSaved: (String) -> Unit) {
             }
         } else {
             TextMMD(text = "5. Paste it here")
-            TextMMD(text = "It's stored encrypted on this device only.")
-            TextFieldMMD(
-                value = tokenInput,
-                onValueChange = { tokenInput = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { TextMMD(text = "refresh_token") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            PasteStep(
+                tokenInput = tokenInput,
+                onTokenInputChange = { tokenInput = it },
+                onTokenSaved = onTokenSaved,
             )
         }
 
@@ -135,4 +148,66 @@ fun SetupScreen(onTokenSaved: (String) -> Unit) {
             }
         }
     }
+}
+
+/**
+ * Offers two ways to get the token in: a local pairing server a desktop
+ * browser on the same WiFi can submit to (avoids typing a ~330-char string
+ * on the Kompakt's own keyboard - see PROJECT-STATUS.md for why on-device
+ * entry turned out to be unreliable), and the plain paste field as a
+ * fallback when there's no second device handy.
+ */
+@Composable
+private fun PasteStep(
+    tokenInput: String,
+    onTokenInputChange: (String) -> Unit,
+    onTokenSaved: (String) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var server by remember { mutableStateOf<PairingServer?>(null) }
+
+    DisposableEffect(Unit) {
+        val instance = PairingServer(
+            onTokenReceived = { token -> scope.launch { onTokenSaved(token) } },
+        )
+        // A collision on the chosen port, or no network at all, just means
+        // no pairing option is shown - the manual field below still works.
+        runCatching { instance.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
+            .onSuccess { server = instance }
+        onDispose { instance.stop() }
+    }
+
+    val ip = remember { PairingServer.localIpAddress() }
+    val activeServer = server
+    if (ip != null && activeServer != null) {
+        TextMMD(
+            text = "Or open http://$ip:${activeServer.listeningPort} on a computer " +
+                "on the same WiFi and enter this PIN:",
+        )
+        TextMMD(text = activeServer.pin, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        HorizontalDividerMMD()
+        TextMMD(text = "Or paste it here directly:")
+    } else {
+        TextMMD(text = "It's stored encrypted on this device only.")
+    }
+
+    TextFieldMMD(
+        value = tokenInput,
+        onValueChange = onTokenInputChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { TextMMD(text = "refresh_token") },
+        singleLine = true,
+        // A refresh_token is an opaque ~330-char string with no spaces to
+        // break words on - on the physical Kompakt, predictive text actively
+        // suggested completions while typing (visible in the suggestion
+        // strip). autoCorrectEnabled = false is enough to stop that;
+        // KeyboardType.Password was tried too, but it turns on Android's
+        // credential-autofill popup (visibly a 1Password suggestion here),
+        // which covers the field and is a worse problem than the one it
+        // solves.
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Done,
+            autoCorrectEnabled = false,
+        ),
+    )
 }

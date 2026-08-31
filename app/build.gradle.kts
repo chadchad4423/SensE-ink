@@ -76,6 +76,12 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.datastore.preferences)
 
+    // Local pairing server (SetupScreen's PairingServer): lets a desktop
+    // browser on the same WiFi paste the refresh_token instead of typing it
+    // on-device. HTTP, not HTTPS - PIN-gated instead; see PROJECT-STATUS.md
+    // for the tradeoff this was chosen over a bundled self-signed cert.
+    implementation(libs.nanohttpd)
+
     // Mudita Mindful Design - required UI library for this project, see sensi-client-spec.md.
     implementation(libs.mudita.mmd)
 
