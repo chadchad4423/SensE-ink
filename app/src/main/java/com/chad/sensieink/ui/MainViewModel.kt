@@ -15,6 +15,7 @@ import com.chad.sensieink.data.ThermostatRepository
 import com.chad.sensieink.data.ThermostatUiState
 import com.chad.sensieink.data.TokenStore
 import com.chad.sensieink.data.noticeFor
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,7 @@ class MainViewModel(
     private val authClient = SensiAuthClient(tokenStore)
     private val realtimeClient = SensiRealtimeClient(authClient)
     private var repository: ThermostatRepository? = null
+    private var repositoryCollectorJob: Job? = null
 
     private val _hasToken = MutableStateFlow(tokenStore.hasRefreshToken())
     val hasToken: StateFlow<Boolean> = _hasToken.asStateFlow()
@@ -68,18 +70,16 @@ class MainViewModel(
         }
     }
 
-    /** Called from the setup screen once the user has pasted a harvested refresh_token. */
+    /**
+     * Called from the setup screen once the user has pasted a harvested
+     * refresh_token - both on first run and on a re-entry after "Update
+     * refresh_token" in Settings, so any already-running repository must be
+     * stopped first (see [startRepository]).
+     */
     fun saveRefreshToken(token: String) {
         tokenStore.refreshToken = token.trim()
         _hasToken.value = true
         startRepository()
-    }
-
-    fun forgetToken() {
-        tokenStore.clear()
-        _hasToken.value = false
-        _uiState.value = ThermostatUiState()
-        repository = null
     }
 
     fun setSetpoint(targetTempF: Int) = repository?.setSetpoint(targetTempF)
@@ -93,10 +93,16 @@ class MainViewModel(
     }
 
     private fun startRepository() {
+        // A re-entry token save can arrive while a previous repository is
+        // still connected; stop it and its collector first so they don't
+        // both keep running against the same viewModelScope indefinitely.
+        repository?.stop()
+        repositoryCollectorJob?.cancel()
+
         val icdId = DeviceId.macToIcdId(THERMOSTAT_MAC)
         val repo = ThermostatRepository(realtimeClient, icdId, viewModelScope)
         repository = repo
-        viewModelScope.launch {
+        repositoryCollectorJob = viewModelScope.launch {
             repo.uiState.collect { _uiState.value = it }
         }
     }

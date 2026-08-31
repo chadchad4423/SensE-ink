@@ -46,17 +46,36 @@ fun SensiApp(viewModel: MainViewModel) {
     val hasToken by viewModel.hasToken.collectAsState()
 
     if (!hasToken) {
-        SetupScreen(onTokenSaved = viewModel::saveRefreshToken)
+        // Wrapped in an empty Scaffold purely for its default window-inset
+        // handling - without it this screen's content starts under the
+        // status bar. Not visible on the emulator (shorter/thinner status
+        // bar), but overlapped the title on the real Kompakt hardware.
+        Scaffold { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                SetupScreen(onTokenSaved = viewModel::saveRefreshToken)
+            }
+        }
         return
     }
 
     var selectedScreen by remember { mutableStateOf(Screen.HOME) }
     var showSettings by remember { mutableStateOf(false) }
+    // A re-entry ("Update refresh_token" in Settings) shows SetupScreen as a
+    // dismissible overlay, same as Settings itself - the stored token is
+    // untouched until the user actually saves a new one. Distinct from the
+    // !hasToken case above, which is first-run onboarding with nothing to
+    // cancel back to.
+    var showReauth by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val temperatureUnit by viewModel.temperatureUnit.collectAsState()
     val notice by viewModel.notice.collectAsState()
 
-    BackHandler(enabled = showSettings) { showSettings = false }
+    fun closeOverlays() {
+        showSettings = false
+        showReauth = false
+    }
+
+    BackHandler(enabled = showSettings || showReauth) { closeOverlays() }
 
     Scaffold(
         topBar = {
@@ -64,14 +83,14 @@ fun SensiApp(viewModel: MainViewModel) {
                 TopAppBarMMD(
                     title = { TextMMD(text = stringResource(R.string.app_name)) },
                     navigationIcon = {
-                        if (showSettings) {
-                            IconButton(onClick = { showSettings = false }) {
+                        if (showSettings || showReauth) {
+                            IconButton(onClick = { closeOverlays() }) {
                                 TextMMD(text = "←")
                             }
                         }
                     },
                     actions = {
-                        if (!showSettings) {
+                        if (!showSettings && !showReauth) {
                             IconButton(onClick = { showSettings = true }) {
                                 Icon(
                                     imageVector = Icons.Filled.Settings,
@@ -99,10 +118,10 @@ fun SensiApp(viewModel: MainViewModel) {
             NavigationBarMMD {
                 Screen.entries.forEach { screen ->
                     NavigationBarItemMMD(
-                        selected = !showSettings && selectedScreen == screen,
+                        selected = !showSettings && !showReauth && selectedScreen == screen,
                         onClick = {
                             selectedScreen = screen
-                            showSettings = false
+                            closeOverlays()
                         },
                         icon = { TextMMD(text = screen.glyph) },
                         label = { TextMMD(text = screen.label) },
@@ -121,14 +140,19 @@ fun SensiApp(viewModel: MainViewModel) {
             }
 
             Box {
-                if (showSettings) {
-                    SettingsScreen(
+                when {
+                    showSettings -> SettingsScreen(
                         temperatureUnit = temperatureUnit,
                         onUnitSelected = viewModel::setTemperatureUnit,
-                        onUpdateToken = viewModel::forgetToken,
+                        onUpdateToken = { showSettings = false; showReauth = true },
                     )
-                } else {
-                    when (selectedScreen) {
+                    showReauth -> SetupScreen(
+                        onTokenSaved = { token ->
+                            viewModel.saveRefreshToken(token)
+                            showReauth = false
+                        },
+                    )
+                    else -> when (selectedScreen) {
                         Screen.HOME -> HomeScreen(
                             uiState = uiState,
                             temperatureUnit = temperatureUnit,
