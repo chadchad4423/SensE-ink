@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.chad.sensieink.data.ConnectionStatus
+import com.chad.sensieink.data.TemperatureUnit
 import com.chad.sensieink.data.ThermostatUiState
 import com.mudita.mmd.components.cards.CardMMD
 import com.mudita.mmd.components.text.TextMMD
@@ -27,7 +28,7 @@ private fun connectionLabel(status: ConnectionStatus): String = when (status) {
 }
 
 @Composable
-fun CurrentStateScreen(uiState: ThermostatUiState) {
+fun CurrentStateScreen(uiState: ThermostatUiState, temperatureUnit: TemperatureUnit) {
     val thermostat = uiState.thermostat
 
     Column(
@@ -48,7 +49,7 @@ fun CurrentStateScreen(uiState: ThermostatUiState) {
                 ) {
                     TextMMD(text = thermostat.name)
                     TextMMD(
-                        text = thermostat.displayTempF?.let { "${it.toInt()} F indoors" }
+                        text = thermostat.displayTempF?.let { "${temperatureUnit.format(it)} indoors" }
                             ?: "Indoor temp unknown",
                     )
                     TextMMD(

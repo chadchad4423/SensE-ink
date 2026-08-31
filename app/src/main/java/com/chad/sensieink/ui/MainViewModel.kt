@@ -6,14 +6,20 @@ import androidx.lifecycle.viewModelScope
 import com.chad.sensieink.data.DeviceId
 import com.chad.sensieink.data.FanSelection
 import com.chad.sensieink.data.OperatingMode
+import com.chad.sensieink.data.PreferencesStore
+import com.chad.sensieink.data.RemoteConfigFetcher
 import com.chad.sensieink.data.SensiAuthClient
 import com.chad.sensieink.data.SensiRealtimeClient
+import com.chad.sensieink.data.TemperatureUnit
 import com.chad.sensieink.data.ThermostatRepository
 import com.chad.sensieink.data.ThermostatUiState
 import com.chad.sensieink.data.TokenStore
+import com.chad.sensieink.data.noticeFor
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -25,7 +31,10 @@ import kotlinx.coroutines.launch
  */
 private const val THERMOSTAT_MAC = "34:6F:92:24:A0:A3"
 
-class MainViewModel(private val tokenStore: TokenStore) : ViewModel() {
+class MainViewModel(
+    private val tokenStore: TokenStore,
+    private val preferencesStore: PreferencesStore,
+) : ViewModel() {
 
     private val authClient = SensiAuthClient(tokenStore)
     private val realtimeClient = SensiRealtimeClient(authClient)
@@ -37,9 +46,25 @@ class MainViewModel(private val tokenStore: TokenStore) : ViewModel() {
     private val _uiState = MutableStateFlow(ThermostatUiState())
     val uiState: StateFlow<ThermostatUiState> = _uiState.asStateFlow()
 
+    val temperatureUnit: StateFlow<TemperatureUnit> = preferencesStore.temperatureUnit.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        TemperatureUnit.FAHRENHEIT,
+    )
+
+    /** A broadcast message or update nudge from remote config; null in the normal case. */
+    private val _notice = MutableStateFlow<String?>(null)
+    val notice: StateFlow<String?> = _notice.asStateFlow()
+
     init {
         if (_hasToken.value) {
             startRepository()
+        }
+        // Independent of auth state - safe to check even before a token is
+        // entered, and never blocks anything if it never returns.
+        viewModelScope.launch {
+            val fetched = RemoteConfigFetcher().fetch() ?: return@launch
+            _notice.value = noticeFor(fetched)
         }
     }
 
@@ -63,6 +88,10 @@ class MainViewModel(private val tokenStore: TokenStore) : ViewModel() {
 
     fun setFanSelection(selection: FanSelection) = repository?.setFanSelection(selection)
 
+    fun setTemperatureUnit(unit: TemperatureUnit) {
+        viewModelScope.launch { preferencesStore.setTemperatureUnit(unit) }
+    }
+
     private fun startRepository() {
         val icdId = DeviceId.macToIcdId(THERMOSTAT_MAC)
         val repo = ThermostatRepository(realtimeClient, icdId, viewModelScope)
@@ -73,10 +102,11 @@ class MainViewModel(private val tokenStore: TokenStore) : ViewModel() {
     }
 
     companion object {
-        fun factory(tokenStore: TokenStore) = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                MainViewModel(tokenStore) as T
-        }
+        fun factory(tokenStore: TokenStore, preferencesStore: PreferencesStore) =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    MainViewModel(tokenStore, preferencesStore) as T
+            }
     }
 }

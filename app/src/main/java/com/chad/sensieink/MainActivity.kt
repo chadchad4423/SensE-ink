@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.chad.sensieink.data.PreferencesStore
 import com.chad.sensieink.data.TokenStore
 import com.chad.sensieink.ui.MainViewModel
 import com.chad.sensieink.ui.SensiApp
@@ -16,9 +17,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val tokenStore = TokenStore(applicationContext)
+        val preferencesStore = PreferencesStore(applicationContext)
 
         setContent {
-            val viewModel: MainViewModel = viewModel(factory = MainViewModel.factory(tokenStore))
+            val viewModel: MainViewModel = viewModel(
+                factory = MainViewModel.factory(tokenStore, preferencesStore),
+            )
             ThemeMMD {
                 SensiApp(viewModel = viewModel)
             }

@@ -1,6 +1,7 @@
 package com.chad.sensieink.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -11,10 +12,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.mudita.mmd.components.cards.CardMMD
 import com.chad.sensieink.ui.screens.CurrentStateScreen
 import com.chad.sensieink.ui.screens.FanScreen
 import com.chad.sensieink.ui.screens.ModeScreen
 import com.chad.sensieink.ui.screens.SetpointScreen
+import com.chad.sensieink.ui.screens.SettingsScreen
 import com.chad.sensieink.ui.screens.SetupScreen
 import com.mudita.mmd.components.nav_bar.NavigationBarItemMMD
 import com.mudita.mmd.components.nav_bar.NavigationBarMMD
@@ -26,6 +30,7 @@ enum class Screen(val label: String, val glyph: String) {
     SETPOINT("Setpoint", "T"),
     MODE("Mode", "M"),
     FAN("Fan", "F"),
+    SETTINGS("Settings", "⚙"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +45,8 @@ fun SensiApp(viewModel: MainViewModel) {
 
     var selectedScreen by remember { mutableStateOf(Screen.CURRENT_STATE) }
     val uiState by viewModel.uiState.collectAsState()
+    val temperatureUnit by viewModel.temperatureUnit.collectAsState()
+    val notice by viewModel.notice.collectAsState()
 
     Scaffold(
         topBar = {
@@ -58,18 +65,37 @@ fun SensiApp(viewModel: MainViewModel) {
             }
         },
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            when (selectedScreen) {
-                Screen.CURRENT_STATE -> CurrentStateScreen(uiState = uiState)
-                Screen.SETPOINT -> SetpointScreen(
-                    uiState = uiState,
-                    onSetpointChange = viewModel::setSetpoint,
-                )
-                Screen.MODE -> ModeScreen(uiState = uiState, onModeSelected = viewModel::setMode)
-                Screen.FAN -> FanScreen(
-                    uiState = uiState,
-                    onFanSelected = viewModel::setFanSelection,
-                )
+        Column(modifier = Modifier.padding(innerPadding)) {
+            // Shown above whichever tab is open, not just State, so a
+            // broadcast message isn't missed by staying on another screen.
+            notice?.let {
+                CardMMD(modifier = Modifier.padding(16.dp)) {
+                    TextMMD(text = it, modifier = Modifier.padding(12.dp))
+                }
+            }
+
+            Box {
+                when (selectedScreen) {
+                    Screen.CURRENT_STATE -> CurrentStateScreen(
+                        uiState = uiState,
+                        temperatureUnit = temperatureUnit,
+                    )
+                    Screen.SETPOINT -> SetpointScreen(
+                        uiState = uiState,
+                        temperatureUnit = temperatureUnit,
+                        onSetpointChange = viewModel::setSetpoint,
+                    )
+                    Screen.MODE -> ModeScreen(uiState = uiState, onModeSelected = viewModel::setMode)
+                    Screen.FAN -> FanScreen(
+                        uiState = uiState,
+                        onFanSelected = viewModel::setFanSelection,
+                    )
+                    Screen.SETTINGS -> SettingsScreen(
+                        temperatureUnit = temperatureUnit,
+                        onUnitSelected = viewModel::setTemperatureUnit,
+                        onUpdateToken = viewModel::forgetToken,
+                    )
+                }
             }
         }
     }

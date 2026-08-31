@@ -9,12 +9,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.chad.sensieink.data.OperatingMode
+import com.chad.sensieink.data.TemperatureUnit
 import com.chad.sensieink.data.ThermostatUiState
 import com.mudita.mmd.components.buttons.ButtonMMD
 import com.mudita.mmd.components.text.TextMMD
 
 @Composable
-fun SetpointScreen(uiState: ThermostatUiState, onSetpointChange: (Int) -> Unit) {
+fun SetpointScreen(
+    uiState: ThermostatUiState,
+    temperatureUnit: TemperatureUnit,
+    onSetpointChange: (Int) -> Unit,
+) {
     val thermostat = uiState.thermostat
 
     Column(
@@ -33,27 +38,32 @@ fun SetpointScreen(uiState: ThermostatUiState, onSetpointChange: (Int) -> Unit) 
             return@Column
         }
 
-        val committed = thermostat.activeSetpointF
+        val committedF = thermostat.activeSetpointF
         TextMMD(
-            text = committed?.let { "Committed setpoint: $it F" } ?: "Committed setpoint: unknown",
+            text = committedF?.let { "Committed setpoint: ${temperatureUnit.format(it)}" }
+                ?: "Committed setpoint: unknown",
         )
 
         // Never animate toward a value the server hasn't acknowledged - show it
         // as a distinct, explicitly-labeled pending line instead.
-        uiState.pendingSetpointF?.let { pending ->
-            TextMMD(text = "Requested: $pending F (waiting for confirmation)")
+        uiState.pendingSetpointF?.let { pendingF ->
+            TextMMD(text = "Requested: ${temperatureUnit.format(pendingF)} (waiting for confirmation)")
         }
 
-        val displayedValue = uiState.pendingSetpointF ?: committed ?: 68
+        // The wire protocol and the +/- step are always whole-degree Fahrenheit
+        // (verified working against the real ST55); temperatureUnit only
+        // changes how this value is displayed, not what's sent or how big a
+        // tap moves it.
+        val displayedValueF = uiState.pendingSetpointF ?: committedF ?: 68
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            ButtonMMD(onClick = { onSetpointChange(displayedValue - 1) }) {
+            ButtonMMD(onClick = { onSetpointChange(displayedValueF - 1) }) {
                 TextMMD(text = "-")
             }
-            TextMMD(text = "$displayedValue F")
-            ButtonMMD(onClick = { onSetpointChange(displayedValue + 1) }) {
+            TextMMD(text = temperatureUnit.format(displayedValueF))
+            ButtonMMD(onClick = { onSetpointChange(displayedValueF + 1) }) {
                 TextMMD(text = "+")
             }
         }
