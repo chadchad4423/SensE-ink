@@ -5,23 +5,18 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <!--
-      Bold monochrome dial glyph, matching the stock Kompakt app icons'
-      thick-stroke line-art style and echoing the app's own setpoint ring
-      (HomeScreen.kt's SetpointSection) - a gauge with a needle pointing to
-      a reading, rather than a literal thermostat unit illustration.
+      Single-line house outline, matching the stock Kompakt app icons'
+      thick-stroke line-art style. One continuous closed path (eave to
+      peak to eave to both bottom corners) rather than a literal
+      thermostat illustration - picked over several other concepts (dial,
+      thermometer, fan, flame/snowflake, wifi-off-a-roof) after a live
+      side-by-side comparison.
     -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FF000000"
         android:strokeWidth="7"
-        android:pathData="M54,24 a30,30 0 1,0 0.1,0 Z" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="6"
         android:strokeLineCap="round"
-        android:pathData="M58.2,44.1 L65.4,29.5" />
-    <path
-        android:fillColor="#FF000000"
-        android:pathData="M54,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+        android:strokeLineJoin="round"
+        android:pathData="M28,58 L54,32 L80,58 L80,90 L28,90 Z" />
 </vector>
