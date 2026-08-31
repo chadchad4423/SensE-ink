@@ -1,14 +1,22 @@
-# Sensi eInk — Project Status
+# SensE-ink — Project Status
 
 Status: Active — verified end-to-end on the emulator against the real thermostat; physical Kompakt pass still needed
 Last verified: 2026-08-31
 Canonical location: `C:\Users\Chad\AndroidStudioProjects\Sensi-eink\PROJECT-STATUS.md`
 Secrets: None stored here
 
+The app is branded **SensE-ink** as of `6b1dde7` (deliberately not "Sensi" -
+trademark concern raised and accepted by Chad). The repository folder,
+`applicationId` (`com.chad.sensieink`), and package name were deliberately
+**not** renamed to match - only the user-visible name changed
+(`R.string.app_name` and the launcher icon). Renaming those would churn
+every file path and lose install identity with the existing debug build for
+no user-visible benefit; revisit only if there's a real reason to.
+
 ## What exists
 
 A Kotlin/Jetpack Compose Android app targeting the Mudita Kompakt, built per
-`sensi-client-spec.md`. Six commits, latest `78cf7d7`. Working tree clean.
+`sensi-client-spec.md`. Seven commits, latest `6b1dde7`. Working tree clean.
 
 - **Protocol layer** (`app/src/main/java/com/chad/sensieink/data/`):
   `SensiAuthClient` (OAuth refresh_token grant), `SensiRealtimeClient`
@@ -18,11 +26,14 @@ A Kotlin/Jetpack Compose Android app targeting the Mudita Kompakt, built per
   (EUI-64 derivation).
 - **UI** (`app/src/main/java/com/chad/sensieink/ui/`): `SetupScreen` (a 6-step
   paged onboarding walkthrough for harvesting a refresh_token, gates the rest
-  of the app until one is stored), `CurrentStateScreen`, `SetpointScreen`,
-  `ModeScreen`, `FanScreen`, `SettingsScreen` (app version, temperature unit
-  toggle, "Update refresh_token" to get back to `SetupScreen`), all built
-  from MMD components (`ButtonMMD`, `TextMMD`, `CardMMD`, `TopAppBarMMD`,
-  `NavigationBarMMD` with 5 tabs).
+  of the app until one is stored), `HomeScreen` (merged current-state +
+  setpoint, see below), `ModeScreen`, `FanScreen`, `SettingsScreen` (app
+  version, temperature unit toggle, "Update refresh_token" to get back to
+  `SetupScreen`). Bottom nav is Home/Mode/Fan only (3 tabs); Settings is a
+  gear icon in the header instead, with a back arrow (and the system back
+  button, via `BackHandler`) to return. Built from MMD components (`TextMMD`,
+  `TopAppBarMMD`, `NavigationBarMMD`) plus one hand-rolled composable (the
+  ring stepper's circular buttons - see below for why).
 - **Remote config** (`data/RemoteConfig.kt`, `BuildConfig.CONFIG_URL`): fetches
   `docs/config.json` from this repo's GitHub raw/Pages URLs at launch for an
   optional broadcast message or update nudge, mirroring the pattern already
@@ -126,6 +137,55 @@ sessions rather than re-discovering.
   regardless of display unit (another live round trip against the real
   thermostat, reverted afterward).
 
+## Rebrand and redesign (`6b1dde7`, 2026-08-31)
+
+Driven by a round of feedback against real Kompakt screenshots (18 stock-app
+screens: Contacts, Recents, Weather, a meditation timer, a podcast app's
+Settings, etc. — not committed here, they're personal photos) and
+CalmDirectory's actual screen source (not just its README). Findings worth
+knowing before touching this UI again:
+
+- **Stock apps never box a small set of facts.** Contacts/Recents/the
+  podcast "Following" list show bold-primary + regular-secondary text rows
+  with plain dividers; the weather app's detail screen is a hero number plus
+  bullet-joined secondary stats, no card. `HomeScreen.kt` follows that —
+  `CardMMD` is gone from it entirely.
+- **`TopAppBarMMD` has a real bug**: it defines
+  `TopAppBarDefaultsMMD.dividerLineHeight = 3.dp` as its intended divider
+  weight, but applies it via `.width()` on an already-`.fillMaxWidth()`
+  divider instead of a thickness/`.height()`, so it's silently overridden
+  and always renders at Material3's 1dp default. `SensiApp.kt` sets
+  `showDivider = false` and draws its own `HorizontalDivider` using that
+  same MMD constant as the real thickness. If MMD ever fixes this upstream,
+  this workaround becomes redundant (harmless, but worth removing then).
+- **`ButtonMMD`/`OutlinedButtonMMD` cannot report press state** - they
+  hardcode their own `NoRippleInteractionSource` internally with no
+  `interactionSource` parameter to inject. The ring stepper's circular +/-
+  buttons (`HomeScreen.kt`'s private `CircularStepButton`) are therefore a
+  small hand-rolled `Box` + `Modifier.clickable(interactionSource = ...)` +
+  `collectIsPressedAsState()`, not an MMD component - the same real
+  black/white-swap principle as TripTime's Calculate button
+  (`ui/TripScreen.kt`, DECISIONS.md D-016), applied to genuine touch
+  feedback. Verified the invert with a held tap caught mid-press via
+  screenshot.
+- **A fixed `.size(220.dp)` on the ring silently rendered an oval**, not a
+  circle: the Column's remaining vertical space was narrower than requested,
+  and Compose clamped the height (not the width, which had room) to fit,
+  producing a stadium shape via `CircleShape`'s 50%-of-smaller-dimension
+  rounding. This is easy to miss in isolation (an empty preview has plenty
+  of room) and only showed up once real content pushed the ring down the
+  screen. Fixed with `fillMaxWidth(fraction).aspectRatio(1f)`, which cannot
+  produce a non-square result regardless of available space. Worth
+  remembering as a general pattern: **prefer `aspectRatio` over a fixed
+  `.size()` for anything that must render as a specific shape**, since a
+  fixed size only holds when there's provably enough room.
+- Bottom nav dropped from 5 tabs to 3 (Home/Mode/Fan); Settings lives behind
+  a gear icon in the header instead, matching every stock app's icon
+  placement (opposite the title, e.g. Contacts' filter/add/search icons).
+- New launcher icon: a bold circular dial with a needle and center dot,
+  echoing the ring stepper rather than illustrating a literal thermostat
+  unit. Verified rendering correctly in the emulator's app drawer.
+
 ## Not yet done
 
 - **No physical Mudita Kompakt pass yet** — only the emulator, which is not
@@ -136,7 +196,6 @@ sessions rather than re-discovering.
   available modes from a live `capabilities` event (spec §4 asks for the
   latter). Not yet a problem in practice — all four are genuinely available
   on this unit — but not verified against an actual `capabilities` payload.
-- No app icon beyond a placeholder vector glyph.
 - Not registered with a git remote — local-only, matching the deliberate
   choice made when this repo was initialized (see `rowdyram-ops` conventions:
   remotes need separate explicit approval). This also means remote config
@@ -145,8 +204,7 @@ sessions rather than re-discovering.
 ## Exact next action
 
 1. Physical-Kompakt pass per the shared device test matrix (ghosting, touch
-   targets, contrast, sleep/wake) before considering the four/five-screen
-   milestone complete.
+   targets, contrast, sleep/wake) before considering the milestone complete.
 2. Consider surfacing a `capabilities` event listener to replace the
    hardcoded Mode-screen mode list, now that a live socket connection is
    proven to work.
