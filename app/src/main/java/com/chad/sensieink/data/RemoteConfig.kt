@@ -73,7 +73,7 @@ fun noticeFor(notice: AppNotice, currentVersion: String = BuildConfig.VERSION_NA
     notice.message?.let { return it }
     val latest = notice.latestVersion ?: return null
     if (!isNewer(latest, currentVersion)) return null
-    return "Sensi eInk $latest is available. This copy is $currentVersion."
+    return "SensE-ink $latest is available. This copy is $currentVersion."
 }
 
 private fun isNewer(candidate: String, current: String): Boolean {

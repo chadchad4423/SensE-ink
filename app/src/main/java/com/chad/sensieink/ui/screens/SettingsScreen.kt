@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.chad.sensieink.BuildConfig
+import com.chad.sensieink.R
 import com.chad.sensieink.data.TemperatureUnit
 import com.mudita.mmd.components.buttons.ButtonMMD
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
@@ -26,7 +28,7 @@ fun SettingsScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextMMD(text = "Sensi eInk v${BuildConfig.VERSION_NAME}")
+        TextMMD(text = "${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}")
 
         TextMMD(text = "Temperature unit")
         TemperatureUnit.entries.forEach { unit ->

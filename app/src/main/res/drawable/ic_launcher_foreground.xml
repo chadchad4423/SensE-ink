@@ -4,16 +4,24 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- A simple monochrome thermostat glyph: circle dial with a pointer. -->
+    <!--
+      Bold monochrome dial glyph, matching the stock Kompakt app icons'
+      thick-stroke line-art style and echoing the app's own setpoint ring
+      (HomeScreen.kt's SetpointSection) - a gauge with a needle pointing to
+      a reading, rather than a literal thermostat unit illustration.
+    -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FF000000"
-        android:strokeWidth="4"
-        android:pathData="M54,20 a34,34 0 1,0 0.1,0 Z" />
+        android:strokeWidth="7"
+        android:pathData="M54,24 a30,30 0 1,0 0.1,0 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M58.2,44.1 L65.4,29.5" />
     <path
         android:fillColor="#FF000000"
-        android:pathData="M54,54 L54,30 L58,30 L58,54 Z" />
-    <path
-        android:fillColor="#FF000000"
-        android:pathData="M54,54 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+        android:pathData="M54,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
 </vector>

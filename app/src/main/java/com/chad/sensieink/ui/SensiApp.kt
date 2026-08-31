@@ -1,9 +1,12 @@
 package com.chad.sensieink.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,25 +15,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.mudita.mmd.components.cards.CardMMD
-import com.chad.sensieink.ui.screens.CurrentStateScreen
+import com.chad.sensieink.R
 import com.chad.sensieink.ui.screens.FanScreen
+import com.chad.sensieink.ui.screens.HomeScreen
 import com.chad.sensieink.ui.screens.ModeScreen
-import com.chad.sensieink.ui.screens.SetpointScreen
 import com.chad.sensieink.ui.screens.SettingsScreen
 import com.chad.sensieink.ui.screens.SetupScreen
+import com.mudita.mmd.components.cards.CardMMD
 import com.mudita.mmd.components.nav_bar.NavigationBarItemMMD
 import com.mudita.mmd.components.nav_bar.NavigationBarMMD
 import com.mudita.mmd.components.text.TextMMD
+import com.mudita.mmd.components.top_app_bar.TopAppBarDefaultsMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 
 enum class Screen(val label: String, val glyph: String) {
-    CURRENT_STATE("State", "S"),
-    SETPOINT("Setpoint", "T"),
+    HOME("Home", "H"),
     MODE("Mode", "M"),
     FAN("Fan", "F"),
-    SETTINGS("Settings", "⚙"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,21 +46,56 @@ fun SensiApp(viewModel: MainViewModel) {
         return
     }
 
-    var selectedScreen by remember { mutableStateOf(Screen.CURRENT_STATE) }
+    var selectedScreen by remember { mutableStateOf(Screen.HOME) }
+    var showSettings by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val temperatureUnit by viewModel.temperatureUnit.collectAsState()
     val notice by viewModel.notice.collectAsState()
 
+    BackHandler(enabled = showSettings) { showSettings = false }
+
     Scaffold(
         topBar = {
-            TopAppBarMMD(title = { TextMMD(text = selectedScreen.label) })
+            Column {
+                TopAppBarMMD(
+                    title = { TextMMD(text = stringResource(R.string.app_name)) },
+                    navigationIcon = {
+                        if (showSettings) {
+                            IconButton(onClick = { showSettings = false }) {
+                                TextMMD(text = "←")
+                            }
+                        }
+                    },
+                    actions = {
+                        if (!showSettings) {
+                            IconButton(onClick = { showSettings = true }) {
+                                TextMMD(text = "⚙")
+                            }
+                        }
+                    },
+                    // MMD's own divider is drawn thinner than its documented
+                    // weight - see TopAppBarDefaultsMMD.dividerLineHeight (3.dp),
+                    // which the library applies via .width() instead of a
+                    // thickness/.height(), so it never actually takes effect.
+                    // Drawing it here with that same constant as the real
+                    // thickness realizes MMD's intended weight.
+                    showDivider = false,
+                )
+                HorizontalDivider(
+                    thickness = TopAppBarDefaultsMMD.dividerLineHeight,
+                    color = TopAppBarDefaultsMMD.dividerColor,
+                )
+            }
         },
         bottomBar = {
             NavigationBarMMD {
                 Screen.entries.forEach { screen ->
                     NavigationBarItemMMD(
-                        selected = selectedScreen == screen,
-                        onClick = { selectedScreen = screen },
+                        selected = !showSettings && selectedScreen == screen,
+                        onClick = {
+                            selectedScreen = screen
+                            showSettings = false
+                        },
                         icon = { TextMMD(text = screen.glyph) },
                         label = { TextMMD(text = screen.label) },
                     )
@@ -66,7 +104,7 @@ fun SensiApp(viewModel: MainViewModel) {
         },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            // Shown above whichever tab is open, not just State, so a
+            // Shown above whichever tab is open, not just Home, so a
             // broadcast message isn't missed by staying on another screen.
             notice?.let {
                 CardMMD(modifier = Modifier.padding(16.dp)) {
@@ -75,26 +113,25 @@ fun SensiApp(viewModel: MainViewModel) {
             }
 
             Box {
-                when (selectedScreen) {
-                    Screen.CURRENT_STATE -> CurrentStateScreen(
-                        uiState = uiState,
-                        temperatureUnit = temperatureUnit,
-                    )
-                    Screen.SETPOINT -> SetpointScreen(
-                        uiState = uiState,
-                        temperatureUnit = temperatureUnit,
-                        onSetpointChange = viewModel::setSetpoint,
-                    )
-                    Screen.MODE -> ModeScreen(uiState = uiState, onModeSelected = viewModel::setMode)
-                    Screen.FAN -> FanScreen(
-                        uiState = uiState,
-                        onFanSelected = viewModel::setFanSelection,
-                    )
-                    Screen.SETTINGS -> SettingsScreen(
+                if (showSettings) {
+                    SettingsScreen(
                         temperatureUnit = temperatureUnit,
                         onUnitSelected = viewModel::setTemperatureUnit,
                         onUpdateToken = viewModel::forgetToken,
                     )
+                } else {
+                    when (selectedScreen) {
+                        Screen.HOME -> HomeScreen(
+                            uiState = uiState,
+                            temperatureUnit = temperatureUnit,
+                            onSetpointChange = viewModel::setSetpoint,
+                        )
+                        Screen.MODE -> ModeScreen(uiState = uiState, onModeSelected = viewModel::setMode)
+                        Screen.FAN -> FanScreen(
+                            uiState = uiState,
+                            onFanSelected = viewModel::setFanSelection,
+                        )
+                    }
                 }
             }
         }
