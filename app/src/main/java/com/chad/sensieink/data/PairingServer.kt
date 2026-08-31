@@ -86,14 +86,42 @@ class PairingServer(
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>Connect to Sensi</title>
             <style>
-                body{font-family:sans-serif;max-width:420px;margin:40px auto;padding:0 16px}
+                body{font-family:sans-serif;max-width:480px;margin:40px auto;padding:0 16px}
                 input{width:100%;box-sizing:border-box;padding:10px;font-size:16px;margin:6px 0 16px}
                 button{width:100%;padding:12px;font-size:16px}
+                ol{padding-left:22px}
+                li{margin-bottom:10px}
+                code{background:#eee;padding:1px 5px;border-radius:3px}
+                hr{margin:28px 0;border:none;border-top:1px solid #ccc}
             </style>
             </head><body>
             <h1>Connect to Sensi</h1>
+            <p>This thermostat app can't log in with your Sensi username and
+            password directly - Sensi's login page is protected by
+            reCAPTCHA. Instead, grab a one-time <code>refresh_token</code>
+            from your browser using the steps below, then paste it in the
+            form at the bottom of this page.</p>
+            <ol>
+                <li>On this computer, open Chrome or Edge and go to
+                <code>manager.sensicomfort.com</code>. Press F12 to open
+                Developer Tools, then click its <b>Network</b> tab.</li>
+                <li>Type <code>token</code> into the Network tab's filter
+                box. Then log in with the same email and password you use in
+                the Sensi mobile app.</li>
+                <li>You may land on a screen asking for $1.50/mo per
+                thermostat. That's a separate paid product (Sensi Manager) -
+                you don't need it and don't need to subscribe. Your token
+                was already captured by the login request in the previous
+                step.</li>
+                <li>In the filtered request list, find
+                <code>token?device=...</code>. There may be two - use the
+                one whose Response tab has content. Open it and copy the
+                full <code>refresh_token</code> value (a long string
+                starting with <code>eyJ</code>).</li>
+            </ol>
+            <hr>
             <p>Enter the PIN shown on the thermostat's screen and paste the
-            refresh_token you harvested from manager.sensicomfort.com.</p>
+            refresh_token you just copied.</p>
             <form method="post" action="/submit">
                 <label for="pin">PIN</label>
                 <input id="pin" name="pin" inputmode="numeric" autocomplete="off" required>
