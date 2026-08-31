@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -148,13 +147,9 @@ private fun SetpointSection(
             .padding(top = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        TextMMD(
-            text = committedF?.let { "Committed setpoint: ${temperatureUnit.format(it)}" }
-                ?: "Committed setpoint: unknown",
-            fontSize = 14.sp,
-        )
-        // Never animate toward a value the server hasn't acknowledged - show it
-        // as a distinct, explicitly-labeled pending line instead.
+        // The committed value itself is self-explanatory from the +/- row
+        // below; only a pending, unconfirmed request needs a distinct label -
+        // never animate toward a value the server hasn't acknowledged.
         uiState.pendingSetpointF?.let { pendingF ->
             TextMMD(
                 text = "Requested: ${temperatureUnit.format(pendingF)} (waiting for confirmation)",
@@ -168,43 +163,21 @@ private fun SetpointSection(
         // tap moves it.
         val displayedValueF = uiState.pendingSetpointF ?: committedF ?: 68
 
-        // aspectRatio(1f), not a fixed .size(): the exact space left above
-        // this point varies with mode/pending text, and a fixed height
-        // silently got clamped shorter than the width once by the Column's
-        // remaining space, rendering an oval instead of a circle. This stays
-        // a true circle regardless of how much room is actually left.
-        Box(
+        Row(
             modifier = Modifier
-                .padding(top = 8.dp)
-                .fillMaxWidth(0.68f)
-                .aspectRatio(1f),
-            contentAlignment = Alignment.Center,
+                .padding(top = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .border(width = 4.dp, color = Color.Black, shape = CircleShape),
-            )
-
-            TextMMD(text = temperatureUnit.format(displayedValueF), fontSize = 34.sp, fontWeight = FontWeight.Bold)
-
-            // Inset just enough to sit inside the ring's stroke, not toward
-            // its center - the first pass placed these close enough to the
-            // middle that the button circles visibly overlapped the
-            // temperature text.
             CircularStepButton(
                 label = "−",
                 onClick = { onSetpointChange(displayedValueF - 1) },
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 6.dp),
             )
+            TextMMD(text = temperatureUnit.format(displayedValueF), fontSize = 34.sp, fontWeight = FontWeight.Bold)
             CircularStepButton(
                 label = "+",
                 onClick = { onSetpointChange(displayedValueF + 1) },
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 6.dp),
             )
         }
     }
