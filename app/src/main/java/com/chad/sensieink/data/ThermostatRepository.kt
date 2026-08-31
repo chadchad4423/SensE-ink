@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface ConnectionStatus {
     data object Connecting : ConnectionStatus
@@ -44,11 +45,22 @@ class ThermostatRepository(
             while (isActive) {
                 _uiState.update { it.copy(connection = ConnectionStatus.Connecting) }
                 try {
-                    realtimeClient.events().collect(::handle)
+                    // The server only pushes a "state" event on connect, not on a
+                    // timer, and there's no request-refresh event (confirmed
+                    // 2026-08-31 against the live backend, and noted in
+                    // iprak/sensi's client.py: "There doesn't seem to be [an]
+                    // event for force state refresh"). Reconnecting periodically
+                    // is how the spec's ~30s refresh cadence is actually achieved.
+                    withTimeoutOrNull(REFRESH_INTERVAL_MS) {
+                        realtimeClient.events().collect(::handle)
+                    }
+                    // A closed-before-timeout cycle (connect_error/disconnect)
+                    // would otherwise hot-loop reconnecting; always pace cycles.
+                    delay(MIN_CYCLE_DELAY_MS)
                 } catch (e: SensiAuthException) {
                     _uiState.update { it.copy(connection = ConnectionStatus.Error(e.message ?: "Authentication failed")) }
+                    delay(RECONNECT_DELAY_MS)
                 }
-                delay(RECONNECT_DELAY_MS)
             }
         }
     }
@@ -101,6 +113,8 @@ class ThermostatRepository(
     }
 
     private companion object {
+        const val REFRESH_INTERVAL_MS = 30_000L
+        const val MIN_CYCLE_DELAY_MS = 3_000L
         const val RECONNECT_DELAY_MS = 5_000L
     }
 }
