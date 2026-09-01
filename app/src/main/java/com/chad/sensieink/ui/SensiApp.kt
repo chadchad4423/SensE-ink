@@ -144,6 +144,7 @@ fun SensiApp(viewModel: MainViewModel) {
                     showSettings -> SettingsScreen(
                         temperatureUnit = temperatureUnit,
                         onUnitSelected = viewModel::setTemperatureUnit,
+                        connectionStatus = uiState.connection,
                         onUpdateToken = { showSettings = false; showReauth = true },
                     )
                     showReauth -> SetupScreen(
@@ -157,6 +158,7 @@ fun SensiApp(viewModel: MainViewModel) {
                             uiState = uiState,
                             temperatureUnit = temperatureUnit,
                             onSetpointChange = viewModel::setSetpoint,
+                            onChangeModeFan = { selectedScreen = Screen.MODE },
                         )
                         Screen.MODE -> ModeScreen(uiState = uiState, onModeSelected = viewModel::setMode)
                         Screen.FAN -> FanScreen(

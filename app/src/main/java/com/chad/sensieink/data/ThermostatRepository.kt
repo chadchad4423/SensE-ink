@@ -119,9 +119,11 @@ class ThermostatRepository(
         realtimeClient.sendSetFanSelection(icdId, selection, device.circulatingFanDutyCycle)
     }
 
-    private companion object {
+    companion object {
+        // Public so Settings can display the real cadence instead of a
+        // second hardcoded literal that could drift out of sync.
         const val REFRESH_INTERVAL_MS = 30_000L
-        const val MIN_CYCLE_DELAY_MS = 3_000L
-        const val RECONNECT_DELAY_MS = 5_000L
+        private const val MIN_CYCLE_DELAY_MS = 3_000L
+        private const val RECONNECT_DELAY_MS = 5_000L
     }
 }
