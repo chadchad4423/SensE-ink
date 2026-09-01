@@ -43,7 +43,13 @@ needs Google services.
 The ST55 name covers two different boards. `1F86U-42WF` lacks both
 HomeKit and the circulating fan; `1F87U-42WF` has both. The unit's app
 exposes a **Circulate Fan** control set to 50% (30 min/hr), which
-indicates 1F87U hardware.
+indicates 1F87U hardware - and as of 2026-09-01 this is no longer just
+inferred from the app's UI: the live socket payload itself returns a real
+`circulating_fan.duty_cycle` of 50%, which the `1F86U-42WF` board doesn't
+have a field for at all. A definitive check (the `menu`+`mode` combo at
+the wall unit: `11`/`22` = HomeKit-capable, `33` = not) would settle it
+outright, but no longer matters for the chosen transport (cloud socket.io,
+not local HomeKit).
 
 **Single-stage on both sides** — staging/demand values will only ever be
 0 or 100. Do not implement two-stage handling.
@@ -62,6 +68,14 @@ outside the LAN. Do not substitute a HAP implementation.
 
 `POST https://oauth.sensiapi.io/token` — OAuth. Use the
 **`refresh_token` grant**.
+
+**Confirmed against the live backend:** the request needs both
+`client_id=fleet` *and* a `client_secret` (hardcoded in Sensi's own app,
+documented in `iprak/sensi`'s `auth.py`) — `client_id` alone returns
+`invalid_client`. The server **rotates the refresh_token on every use**;
+persist the new one immediately after each refresh, don't cache the
+originally-harvested value anywhere else. See §7 for the rest of what's
+been verified.
 
 The refresh token is obtained manually, once:
 
@@ -101,17 +115,24 @@ temp_offset_lower_bound, temp_offset_upper_bound`
 
 Trim to what §4 actually needs.
 
-> **Engine.IO version gotcha.** pysensi pins `EIO=3`. The Java client
-> `io.socket:socket.io-client` speaks EIO=4 in 2.x and EIO=3 only in
-> 1.x. A version mismatch fails at handshake and *presents as an auth
-> error*. Determine the server's current version empirically before
-> blaming credentials.
+> **Engine.IO version note (resolved — see §7).** pysensi pins `EIO=3`,
+> which raised a concern that the Java `io.socket:socket.io-client`
+> client's EIO=4 default (2.x) might mismatch and fail at handshake in a
+> way that presents as an auth error. Confirmed against the live server:
+> it accepts both, and the 2.x default works end-to-end. Kept here as a
+> footnote in case a future backend change narrows that.
 
 Poll/refresh cadence in the reference implementation is 30 seconds.
 
 ## 4. Scope
 
-Four screens. Resist scope growth.
+As built (see `PROJECT-STATUS.md` for the current, exact screen list -
+this section describes intent, not a screen count to hold fixed): current
+state and setpoint merged into one Home screen, plus Mode, Fan, and a
+Settings screen (units, connection status, refresh cadence, about) that
+wasn't part of the original plan but fits the same "control this one
+thermostat" scope. Resist scope growth toward the following, which is the
+constraint that actually matters:
 
 1. **Current state** — indoor temp, humidity, running/idle
 2. **Setpoint** — single target temp, +/- adjust
@@ -161,8 +182,14 @@ alongside the MMD docs — worked examples on this stack are scarce.
 - **No animation, no transitions, no spinners.** MMD disables ripple by
   default; do not re-enable it or reach for `androidx.compose.animation`.
   Use a static text status line in place of a progress indicator.
-- **Full-refresh redraws** on screen change. Avoid partial-update churn
-  that ghosts.
+- **Full-refresh redraws on screen change; avoid churn, not partial
+  updates as a category.** The concern is thrashing the panel with
+  frequent redraws that ghost - not partial updates themselves. A
+  deliberate, infrequent partial redraw of a small region (e.g.
+  redrawing just a changed digit after a debounced input, rather than
+  the whole screen) is fine and is what this app actually does for its
+  setpoint keys; what to avoid is redrawing on every intermediate value
+  of something the user is still adjusting.
 - **Monochrome.** Use MMD's e-ink color scheme rather than defining
   colors. No greys for body text, no gradients, no shadows, no
   elevation, no anti-aliased hairlines.
@@ -185,18 +212,40 @@ Read these rather than guessing at the protocol.
 | `w1ll1am23/pysensi` | Python | Original reverse engineering. Source of the capabilities string. |
 | `homebridge-sensi` | TypeScript | Credits iprak for API code. **Closest to Kotlin — read this first.** |
 
-## 7. Unverified — test, don't assume
+## 7. Verified against the live backend (2026-08-31 through 2026-09-01)
 
-1. Whether `manager.sensicomfort.com` still mints a refresh token for a
-   plain consumer (non-subscriber) account. **The entire design rests on
-   this.** Verify before writing code.
-2. Current Engine.IO version on `rt.sensiapi.io`.
-3. Exact event names and payload shape on the socket — take these from
-   the reference implementations, then confirm against live traffic.
-4. Whether the EUI-64 device ID derivation matches the live payload.
-5. MuditaOS K's Android API level, and the MMD release compatible with it.
-6. Current MMD component inventory and API — check the Zeroheight docs
-   and the repo rather than relying on names quoted in this spec.
+Everything in this section was an open question as of the original spec
+and has since been settled against the real account, real device, and
+real thermostat (serial `MK20250414220`). See `PROJECT-STATUS.md` for the
+full verification history; this section folds in the specifics that
+belong in the spec itself rather than only in status notes.
+
+1. **`manager.sensicomfort.com` does mint a refresh token for a plain
+   non-subscriber account.** The account hits a $1.50/mo-per-thermostat
+   paywall screen *after* login, but the OAuth token exchange
+   (`token?device=...`) already fires during the login POST itself,
+   before that screen renders - the paywall never blocks token capture.
+   This was the single load-bearing assumption of the whole design, and
+   it held.
+2. **The `refresh_token` grant needs both `client_id=fleet` *and* a
+   `client_secret`** (hardcoded in Sensi's own app, documented in
+   `iprak/sensi`'s `auth.py`) - `client_id` alone returns `invalid_client`.
+   This isn't in `pysensi` and is exactly the kind of undocumented detail
+   that turns into a multi-hour debugging session after a backend change.
+3. **The `refresh_token` rotates on every use** and must be re-persisted
+   immediately after each refresh (`SensiAuthClient.refresh()` does this).
+4. **`rt.sensiapi.io/thermostat/` accepts both `EIO=3` and `EIO=4`**, and
+   `io.socket:socket.io-client` 2.x's default (EIO=4) works end-to-end -
+   the version-mismatch concern below turned out not to apply.
+5. **EUI-64 device ID derivation matches the live payload's `thermostats`
+   claim.**
+6. **Device: Android API 31, 480x800 physical, ~213dpi**, confirmed
+   directly on the physical Kompakt (not just inferred from a sibling
+   project's release notes).
+7. **`com.mudita:MMD` 1.0.2** on Maven Central is the version in use;
+   confirmed real and resolvable directly against `repo1.maven.org`
+   (Maven Central's own search index was stale/empty for this group at
+   the time).
 
 ## 8. Known fragility
 

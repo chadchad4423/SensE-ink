@@ -26,7 +26,7 @@ sessions; `PROJECT-STATUS.md` holds the exact current state and next action.
 - **No animation, no ripple, no spinners.** `ThemeMMD` already disables ripple
   (`LocalRippleConfiguration provides null`). Don't reach for
   `androidx.compose.animation` or a progress indicator; use a static status
-  text line instead (see `CurrentStateScreen.kt`).
+  text line instead (see `HomeScreen.kt`'s freshness line).
 - **Never optimistically animate a value toward an unacknowledged setpoint.**
   Show the last-confirmed (`ThermostatState`) and locally-pending
   (`ThermostatUiState.pendingSetpointF`/`pendingMode`/`pendingFanSelection`)
@@ -42,9 +42,13 @@ sessions; `PROJECT-STATUS.md` holds the exact current state and next action.
 - **Single-stage indoor and outdoor equipment.** Demand/staging values are
   only ever 0 or 100 for this specific thermostat. Don't add two-stage
   handling.
-- **Four screens, no more.** Current state, setpoint, mode, fan. Scheduling,
-  geofencing, usage reports, alerts, push notifications, multi-thermostat
-  support, and remote sensors are explicitly out of scope per the spec.
+- **Five screens, no more.** Home (current state + setpoint, merged into
+  one screen since the spec was written - setpoint is not a separate
+  screen), Mode, Fan, Settings, and Setup (first-run + re-auth). What
+  actually matters is the constraint behind that count, which still holds:
+  scheduling, geofencing, usage reports, alerts, push notifications,
+  multi-thermostat support, and remote sensors are explicitly out of scope.
+  Resist scope growth toward any of those, not toward this specific number.
 - **Isolate all Sensi protocol concerns behind `SensiAuthClient` /
   `SensiRealtimeClient` / `ThermostatRepository`.** Emerson has rewritten this
   backend's auth at least twice historically (see spec §8) — a future break

@@ -25,7 +25,13 @@ A Kotlin/Jetpack Compose Android app targeting the Mudita Kompakt, built per
 `sensi-client-spec.md` (protocol/scope) and, as of 2026-09-01, a follow-on UI
 revision (see "Home/Mode/Fan/Settings redesign" below - source doc not
 committed, it's a personal file: `sensi-ui-revision.md` plus two SVG mockups,
-share those directly with any other agent working on UI).
+share those directly with any other agent working on UI). A second personal
+file, `sensi-post-review-analysis.md` (2026-09-01), reviewed that redesign
+against this doc plus the on-device result and caught several real issues -
+most of the "Not yet done" items below and the Kelvin defect trace back to
+it. Share it alongside the other two if handing this project to another
+agent; its findings are folded into this document but its own reasoning is
+more complete than this summary.
 
 - **Protocol layer** (`app/src/main/java/com/chad/sensieink/data/`):
   `SensiAuthClient` (OAuth refresh_token grant), `SensiRealtimeClient`
@@ -69,7 +75,12 @@ share those directly with any other agent working on UI).
   gating), at the cost of not encrypting the token in transit. This exists
   because on-device token entry was proven unreliable both for real users
   and for scripted testing (`adb shell input text` corrupts long strings at
-  composing-text chunk boundaries).
+  composing-text chunk boundaries). Mitigating fact worth keeping in mind
+  alongside the PIN rationale: the `refresh_token` **rotates on every use**
+  (see below), so a token observed in transit during pairing has a bounded
+  useful life - it's invalidated the next time the app itself refreshes,
+  which reduces, though doesn't eliminate, the real cost of the plaintext
+  transfer.
 - **Launcher icon**: a plain bold "S" monogram (Arial Bold, rendered to a
   432x432 PNG and centered on its true ink bounds, not font line-height -
   `drawable-xxxhdpi/ic_launcher_foreground.png`). Went through several
@@ -78,9 +89,14 @@ share those directly with any other agent working on UI).
   `965787d`..`cd33e03` for the full sequence if it matters later.
 - **Remote config** (`data/RemoteConfig.kt`, `BuildConfig.CONFIG_URL`):
   fetches `docs/config.json` from this repo's GitHub raw URL at launch for
-  an optional broadcast message or update nudge. Repo now has a remote, but
-  `docs/config.json` doesn't exist yet - still fails silently by design,
-  not yet verified to show a real notice.
+  an optional broadcast message or update nudge. **Currently cannot work
+  even with `docs/config.json` added**: the repo is private, and
+  `raw.githubusercontent.com` 404s for private repos without an auth token
+  in the request; GitHub Pages doesn't serve private repos on a free plan
+  either. This isn't a code bug - it's an infrastructure mismatch between
+  "private repo" and "public raw-file fetch" - and the failure is
+  indistinguishable from the already-verified silent-failure path, so it's
+  easy to not notice. See "Not yet done" for the real options.
 - **Temperature unit preference** (`data/PreferencesStore.kt`, DataStore):
   Fahrenheit/Celsius/Kelvin, display-only. Kelvin has no degree symbol
   (`K`, not `°K`) - both `HomeScreen`'s hero number and `SettingsScreen`'s
@@ -247,30 +263,78 @@ short version:
 
 ## Not yet done
 
+- **Kelvin can't represent a one-degree setpoint step - real, user-visible
+  defect on Home's primary control.** 1°F ≈ 0.556 K, so at integer Kelvin,
+  adjacent whole-Fahrenheit setpoints frequently round to the *same*
+  displayed K value (e.g. 73°F → 296K, 74°F → 296K, 75°F → 297K) - pressing
+  + moves the stored setpoint but the giant hero number doesn't visibly
+  change, on roughly half of all steps. This was always true of the
+  Kelvin/Fahrenheit conversion, but only became a real problem once the
+  redesign made the setpoint (not indoor temp) the hero - the whole layout
+  now assumes the hero number is what the keys visibly act on. Not yet
+  fixed - needs a product decision, not just a code fix: drop Kelvin from
+  `PreferencesStore` entirely (simplest; it was added as a joke, not a
+  real use case), or render Kelvin to one decimal (`296.5 K`) to preserve
+  resolution at the cost of hero-number width and a decimal that never
+  appears in °F/°C. Do **not** fix this by quantizing the setpoint step
+  itself to whole Kelvin when K is selected - that would make the +/- keys
+  do something different depending on a display preference, which is a
+  worse coupling than the bug.
 - First-run (`SetupScreen`) typography not yet aligned with the
   Home/Mode/Fan/Settings redesign (see above).
+- `RemoteConfig` cannot fetch `docs/config.json` while the repo stays
+  private (see above) - three real options, needs a decision: make the
+  repo public (no secrets in it by design; `.gitignore` already covers
+  `secrets/`/`*.token`/`*.secret`), host `config.json` in a public Gist and
+  point `CONFIG_URL` there instead, or drop the feature outright (it's a
+  broadcast channel for an app with exactly one user - a network call on
+  every launch and a failure path to maintain is a real cost for that).
 - No live write path for `circulating_fan.duty_cycle` - the Fan screen's
-  Circulate sub-row is read-only pending this.
+  Circulate sub-row is read-only pending this. Worth one check before
+  treating this as permanent: `circulating_fan` is already in the socket's
+  subscribe capabilities list, which usually implies a matching write
+  event exists - check how `homebridge-sensi`/`iprak/sensi` set it before
+  assuming there isn't one.
 - Mode screen still hardcodes `[Off, Heat, Cool, Auto]` rather than reading
   available modes from a live `capabilities` event (spec §4 asks for the
   latter). Not yet a problem in practice - all four are genuinely available
   on this unit - but not verified against an actual `capabilities` payload.
+  Second-order effect to remember if this changes: Mode's fixed-slot dot
+  layout must not reflow when the row count itself changes - reserve space
+  for the max row count, don't just let the list grow/shrink.
 - Settings' `Thermostat` row has no detail screen (model/firmware/MAC/
-  RSSI/battery) - no source of that data exists yet.
-- `docs/config.json` doesn't exist yet, so `RemoteConfig`'s second
-  (GitHub-raw) fallback URL has nothing to fetch - only the silent-failure
-  path is verified.
-- Most recent commit (`734ea15`, the redesign) is not yet pushed to
+  RSSI/battery). Likely buildable, not yet built: the *capabilities
+  string* (spec §3, from pysensi) is what's missing battery/wifi RSSI
+  fields, not the API itself - `iprak/sensi` exposes both as live
+  entities, and the official Sensi app's own About screen shows both for
+  this unit (3.1V, 60 RSSI) plus firmware `6004850907`. MAC is already
+  algorithmically recoverable by reversing `DeviceId`'s EUI-64 transform.
+  Take exact capability field names from `iprak/sensi` before adding them
+  to the subscribe list, not from guesswork; confirm firmware is actually
+  in the stream before promising that field specifically.
+- **Open UI decision, not yet made either way**: the shared header
+  currently reads "SensE-ink" on every screen (Home/Mode/Fan/Settings
+  alike), which was a deliberate early choice (app name instead of
+  per-page titles). Worth weighing against the fact that three screens
+  sharing an identical header carries no location information - Home is
+  the defensible case for it (root screen, gear icon for the one other
+  destination); Mode/Settings arguably aren't. Not changed without asking
+  first, since it reverses an explicit earlier decision.
+- Most recent commits (`734ea15` onward) are not yet pushed to
   `origin/master` - confirm before assuming the remote is current.
 
 ## Exact next action
 
-1. Push `734ea15` (and anything after it) to `origin/master` once Chad
+1. Decide the Kelvin fix (drop it vs. one-decimal display) and ship it -
+   highest priority, it's a defect on the app's most-used control.
+2. Decide `RemoteConfig`'s fate (public repo / public Gist / drop it)
+   before spending any more time on its "verify a real notice renders"
+   next-action item, which cannot succeed as the repo is configured now.
+3. Push `734ea15` (and anything after it) to `origin/master` once Chad
    confirms.
-2. If picking UI work back up: align `SetupScreen`'s typography with the
-   rest of the app, per the redesign's scale.
-3. If picking protocol work back up: a `circulating_fan.duty_cycle` write
-   event, to make Fan's Circulate sub-row actually editable.
-4. Once `docs/config.json` exists and GitHub Pages (or raw) is confirmed
-   reachable: verify `RemoteConfig` actually renders a real notice, not
-   just the silent-failure path.
+4. If picking UI work back up: align `SetupScreen`'s typography with the
+   rest of the app, per the redesign's scale; resolve the header-text
+   open decision above.
+5. If picking protocol work back up: check whether `circulating_fan` has
+   a real write event before building one; if so, wire it up to make
+   Fan's Circulate sub-row actually editable.
