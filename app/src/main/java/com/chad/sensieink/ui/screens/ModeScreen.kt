@@ -73,13 +73,15 @@ fun ModeScreen(uiState: ThermostatUiState, onModeSelected: (OperatingMode) -> Un
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             )
         }
-        AVAILABLE_MODES.forEach { mode ->
+        AVAILABLE_MODES.forEachIndexed { index, mode ->
             SelectableRow(
                 label = modeLabel(mode),
                 selected = mode == selectedMode,
                 onClick = { onModeSelected(mode) },
             )
-            HorizontalDividerMMD()
+            // No divider after the last row - the list should end flush,
+            // not with a trailing rule and empty space beneath it.
+            if (index != AVAILABLE_MODES.lastIndex) HorizontalDividerMMD()
         }
     }
 }

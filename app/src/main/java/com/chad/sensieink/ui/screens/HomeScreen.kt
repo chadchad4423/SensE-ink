@@ -270,11 +270,12 @@ private fun FreshnessLine(lastUpdatedAtMillis: Long?, disconnected: Boolean) {
 
 private fun relativeAge(nowMillis: Long, lastUpdatedAtMillis: Long): String {
     val elapsedSec = ((nowMillis - lastUpdatedAtMillis) / 1000).coerceAtLeast(0)
-    return if (elapsedSec < 60) {
-        "${elapsedSec}s ago"
-    } else {
-        val minutes = elapsedSec / 60
-        "$minutes min ago"
+    return when {
+        // "0s ago" reads like a per-second counter even though this line
+        // only ever recomputes at coarse intervals - "just now" doesn't.
+        elapsedSec < 5 -> "just now"
+        elapsedSec < 60 -> "${elapsedSec}s ago"
+        else -> "${elapsedSec / 60} min ago"
     }
 }
 

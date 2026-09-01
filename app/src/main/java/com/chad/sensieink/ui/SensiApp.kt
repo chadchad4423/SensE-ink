@@ -34,10 +34,10 @@ import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarDefaultsMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 
-enum class Screen(val label: String, val glyph: String) {
-    HOME("Home", "H"),
-    MODE("Mode", "M"),
-    FAN("Fan", "F"),
+enum class Screen(val label: String) {
+    HOME("Home"),
+    MODE("Mode"),
+    FAN("Fan"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,7 +123,14 @@ fun SensiApp(viewModel: MainViewModel) {
                             selectedScreen = screen
                             closeOverlays()
                         },
-                        icon = { TextMMD(text = screen.glyph) },
+                        // No icon glyph - a single letter that just repeats
+                        // the label underneath it carries no information of
+                        // its own, and dropping it returns vertical space
+                        // to the screens above (the icon slot is a required
+                        // parameter, so an empty composable rather than
+                        // omitting it - MMD's own layout still collapses it
+                        // to zero height with nothing drawn in it).
+                        icon = {},
                         label = { TextMMD(text = screen.label) },
                     )
                 }

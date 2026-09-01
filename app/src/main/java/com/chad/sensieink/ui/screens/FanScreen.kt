@@ -54,7 +54,7 @@ fun FanScreen(uiState: ThermostatUiState, onFanSelected: (FanSelection) -> Unit)
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             )
         }
-        FAN_SELECTIONS.forEach { selection ->
+        FAN_SELECTIONS.forEachIndexed { index, selection ->
             SelectableRow(
                 label = fanLabel(selection),
                 selected = selection == selected,
@@ -67,7 +67,9 @@ fun FanScreen(uiState: ThermostatUiState, onFanSelected: (FanSelection) -> Unit)
                     modifier = Modifier.padding(start = 36.dp, top = 4.dp, bottom = 12.dp),
                 )
             }
-            HorizontalDividerMMD()
+            // No divider after the last row - the list should end flush,
+            // not with a trailing rule and empty space beneath it.
+            if (index != FAN_SELECTIONS.lastIndex) HorizontalDividerMMD()
         }
     }
 }

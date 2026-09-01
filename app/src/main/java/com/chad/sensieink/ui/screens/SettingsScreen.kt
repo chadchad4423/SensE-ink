@@ -63,7 +63,7 @@ fun SettingsScreen(
         HorizontalDividerMMD()
 
         SettingsRow(label = "About", value = "${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}")
-        HorizontalDividerMMD()
+        // No trailing divider - the list should end flush after the last row.
     }
 }
 
