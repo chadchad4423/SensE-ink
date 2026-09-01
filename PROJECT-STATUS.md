@@ -2,9 +2,10 @@
 
 Status: Active — verified end-to-end on the physical Mudita Kompakt against the real thermostat
 Last verified: 2026-09-01
-Canonical location: `C:\Users\Chad\AndroidStudioProjects\Sensi-eink\PROJECT-STATUS.md`
-(also reachable at `D:\Dev\AndroidStudioProjects\Sensi-eink` - same directory via an NTFS
-junction; edit either path, it's one file)
+Canonical location: `D:\Dev\AndroidStudioProjects\Sensi-eink\PROJECT-STATUS.md`
+(the project folder migrated here 2026-09-01; `C:\Users\Chad\AndroidStudioProjects\Sensi-eink`
+is now an NTFS junction pointing at this directory, kept for backward-compat access -
+same underlying files either way, edit either path, but treat D: as the real one)
 Secrets: None stored here
 
 The app is branded **SensE-ink** as of `6b1dde7` (deliberately not "Sensi" -

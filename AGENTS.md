@@ -1,8 +1,10 @@
 # Instructions for AI Assistants
 
 Status: Active
-Last verified: 2026-08-31
-Canonical location: `C:\Users\Chad\AndroidStudioProjects\Sensi-eink\AGENTS.md`
+Last verified: 2026-09-01
+Canonical location: `D:\Dev\AndroidStudioProjects\Sensi-eink\AGENTS.md`
+(`C:\Users\Chad\AndroidStudioProjects\Sensi-eink` is an NTFS junction to this
+directory as of 2026-09-01's folder migration - same files either path)
 Secrets: None stored here — the harvested Sensi `refresh_token` lives only in
 the device's `EncryptedSharedPreferences` and this session's local scratchpad,
 never in this repository. See `.gitignore` (`secrets/`, `*.token`, `*.secret`).
