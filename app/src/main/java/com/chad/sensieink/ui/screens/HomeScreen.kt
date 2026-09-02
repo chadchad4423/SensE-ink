@@ -178,7 +178,10 @@ private fun SetpointHero(
         // hero treatment, unchanged from before this redesign.
         TextMMD(text = temperatureUnit.format(displayedF), fontSize = 60.sp, fontWeight = FontWeight.Bold)
         thermostat.displayTempF?.let { indoorF ->
-            TextMMD(text = "now ${temperatureUnit.format(indoorF.toInt())}", fontSize = 15.sp) // bodySmall
+            // format(Double), not format(indoorF.toInt()) - truncating to
+            // Int before formatting would throw away the fractional
+            // precision Kelvin's one-decimal display now depends on.
+            TextMMD(text = "now ${temperatureUnit.format(indoorF)}", fontSize = 15.sp) // bodySmall
         }
 
         Spacer(modifier = Modifier.height(24.dp))

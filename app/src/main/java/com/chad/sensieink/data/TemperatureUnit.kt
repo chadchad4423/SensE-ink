@@ -23,7 +23,22 @@ enum class TemperatureUnit(val label: String, val symbol: String) {
 
     fun fromFahrenheit(fahrenheit: Int): Int = fromFahrenheit(fahrenheit.toDouble())
 
-    fun format(fahrenheit: Double): String = "${fromFahrenheit(fahrenheit)} $symbol"
+    /**
+     * Kelvin gets one decimal place; F/C stay whole numbers. 1 degree F is
+     * only ~0.556 K, so at whole-Kelvin resolution adjacent whole-degree F
+     * setpoints frequently round to the *same* displayed K value (73F and
+     * 74F both show 296K) - meaning the hero number on Home, which is what
+     * the +/- keys visibly act on, can fail to change on a tap. One decimal
+     * (0.1K granularity, well under the ~0.556K step) makes every
+     * whole-degree F value map to a distinct displayed K value.
+     */
+    fun format(fahrenheit: Double): String = when (this) {
+        KELVIN -> {
+            val kelvin = (fahrenheit - 32) * 5.0 / 9.0 + 273.15
+            "%.1f %s".format(kelvin, symbol)
+        }
+        else -> "${fromFahrenheit(fahrenheit)} $symbol"
+    }
 
-    fun format(fahrenheit: Int): String = "${fromFahrenheit(fahrenheit)} $symbol"
+    fun format(fahrenheit: Int): String = format(fahrenheit.toDouble())
 }
