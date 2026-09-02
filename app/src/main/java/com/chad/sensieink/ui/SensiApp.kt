@@ -81,7 +81,21 @@ fun SensiApp(viewModel: MainViewModel) {
         topBar = {
             Column {
                 TopAppBarMMD(
-                    title = { TextMMD(text = stringResource(R.string.app_name)) },
+                    // Home keeps the app name (root screen, nothing to
+                    // navigate back to); every other screen names itself -
+                    // three screens sharing one identical header carried no
+                    // location information. Reverses an earlier deliberate
+                    // choice (app name instead of per-page titles); revisit
+                    // only with as much intent as that original choice had.
+                    title = {
+                        val headerText = when {
+                            showSettings -> "Settings"
+                            showReauth -> stringResource(R.string.app_name)
+                            selectedScreen == Screen.HOME -> stringResource(R.string.app_name)
+                            else -> selectedScreen.label
+                        }
+                        TextMMD(text = headerText)
+                    },
                     navigationIcon = {
                         if (showSettings || showReauth) {
                             IconButton(onClick = { closeOverlays() }) {
