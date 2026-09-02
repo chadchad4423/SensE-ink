@@ -20,7 +20,7 @@ val localProperties = Properties().apply {
 }
 val configUrl: String = localProperties.getProperty(
     "CONFIG_URL",
-    "https://raw.githubusercontent.com/chadchad4423/Sensi-eink/main/docs/config.json",
+    "https://raw.githubusercontent.com/chadchad4423/SensE-ink/main/docs/config.json",
 )
 
 android {

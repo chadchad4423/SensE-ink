@@ -14,10 +14,13 @@ trademark concern raised and accepted by Chad). The repository folder,
 **not** renamed to match - only the user-visible name changed
 (`R.string.app_name` and the launcher icon).
 
-Repo has a GitHub remote as of 2026-09-01: `github.com/chadchad4423/Sensi-eink`,
-**private**. Pushed through `cd33e03`; the most recent commit (the
-Home/Mode/Fan/Settings redesign, `734ea15`) is committed locally but not
-yet pushed - check `git log origin/master..HEAD` before assuming parity.
+Repo has a GitHub remote as of 2026-09-01: `github.com/chadchad4423/SensE-ink`
+(note the actual repo name is `SensE-ink`, matching the app brand - not
+`Sensi-eink`, which is only the local folder name, deliberately kept
+different; earlier notes in this file and the git remote URL itself had
+this wrong, both fixed 2026-09-02). Made **public** 2026-09-02 specifically
+to unblock `RemoteConfig` (see below) - the app has no secrets in it by
+design.
 
 ## What exists
 
@@ -89,14 +92,15 @@ more complete than this summary.
   `965787d`..`cd33e03` for the full sequence if it matters later.
 - **Remote config** (`data/RemoteConfig.kt`, `BuildConfig.CONFIG_URL`):
   fetches `docs/config.json` from this repo's GitHub raw URL at launch for
-  an optional broadcast message or update nudge. **Currently cannot work
-  even with `docs/config.json` added**: the repo is private, and
-  `raw.githubusercontent.com` 404s for private repos without an auth token
-  in the request; GitHub Pages doesn't serve private repos on a free plan
-  either. This isn't a code bug - it's an infrastructure mismatch between
-  "private repo" and "public raw-file fetch" - and the failure is
-  indistinguishable from the already-verified silent-failure path, so it's
-  easy to not notice. See "Not yet done" for the real options.
+  an optional broadcast message or update nudge. Previously couldn't work
+  at all - `raw.githubusercontent.com` 404s for private repos without an
+  auth token, and GitHub Pages doesn't serve private repos on a free plan.
+  **Repo made public 2026-09-02 specifically to fix this** (Chad's call,
+  asked directly, over a public Gist or dropping the feature). The fetch
+  URL itself is still unverified end-to-end - `docs/config.json` doesn't
+  exist in the repo yet, so it 404s for a different, expected reason now
+  (missing file, not private-repo blocking) - only the silent-failure path
+  is confirmed working.
 - **Temperature unit preference** (`data/PreferencesStore.kt`, DataStore):
   Fahrenheit/Celsius/Kelvin, display-only. Kelvin has no degree symbol
   (`K`, not `°K`) - both `HomeScreen`'s hero number and `SettingsScreen`'s
@@ -261,34 +265,37 @@ short version:
   `aspectRatio(1f)`. **Prefer `aspectRatio` over a fixed `.size()`** for
   anything that must render as a specific shape.
 
+## Resolved 2026-09-02 (asked directly, Chad's calls)
+
+Three items from the post-review analysis needed a product decision, not
+just a code fix. All three are now decided and shipped:
+
+- **Kelvin's setpoint-collision bug**: fixed with one decimal place
+  (`296.5 K`) rather than dropping the unit. See `TemperatureUnit.kt`.
+- **`RemoteConfig`'s private-repo blocker**: fixed by making the GitHub
+  repo public (`734ea15`..`72e40bc` pushed alongside this). No secrets in
+  it by design. `docs/config.json` still doesn't exist yet, though - see
+  below, the fetch itself is still unverified end-to-end.
+- **Header-per-screen naming**: switched from a fixed "SensE-ink" on every
+  screen to Mode/Fan/Settings showing their own name, Home keeping the app
+  name as the deliberate exception. Reverses the earlier choice
+  (`SensiApp.kt`).
+
+Also caught and fixed while making the repo public: **the actual GitHub
+repo name is `SensE-ink`**, not `Sensi-eink` - this file and the git
+remote URL both had the wrong name since the repo was created, and it
+propagated into `BuildConfig.CONFIG_URL`'s default too (fixed). The local
+folder is still deliberately named `Sensi-eink` (unrelated, a separate
+choice made at rebrand time) - don't conflate the two again.
+
 ## Not yet done
 
-- **Kelvin can't represent a one-degree setpoint step - real, user-visible
-  defect on Home's primary control.** 1°F ≈ 0.556 K, so at integer Kelvin,
-  adjacent whole-Fahrenheit setpoints frequently round to the *same*
-  displayed K value (e.g. 73°F → 296K, 74°F → 296K, 75°F → 297K) - pressing
-  + moves the stored setpoint but the giant hero number doesn't visibly
-  change, on roughly half of all steps. This was always true of the
-  Kelvin/Fahrenheit conversion, but only became a real problem once the
-  redesign made the setpoint (not indoor temp) the hero - the whole layout
-  now assumes the hero number is what the keys visibly act on. Not yet
-  fixed - needs a product decision, not just a code fix: drop Kelvin from
-  `PreferencesStore` entirely (simplest; it was added as a joke, not a
-  real use case), or render Kelvin to one decimal (`296.5 K`) to preserve
-  resolution at the cost of hero-number width and a decimal that never
-  appears in °F/°C. Do **not** fix this by quantizing the setpoint step
-  itself to whole Kelvin when K is selected - that would make the +/- keys
-  do something different depending on a display preference, which is a
-  worse coupling than the bug.
 - First-run (`SetupScreen`) typography not yet aligned with the
-  Home/Mode/Fan/Settings redesign (see above).
-- `RemoteConfig` cannot fetch `docs/config.json` while the repo stays
-  private (see above) - three real options, needs a decision: make the
-  repo public (no secrets in it by design; `.gitignore` already covers
-  `secrets/`/`*.token`/`*.secret`), host `config.json` in a public Gist and
-  point `CONFIG_URL` there instead, or drop the feature outright (it's a
-  broadcast channel for an app with exactly one user - a network call on
-  every launch and a failure path to maintain is a real cost for that).
+  Home/Mode/Fan/Settings redesign.
+- `docs/config.json` doesn't exist in the repo yet, so `RemoteConfig`'s
+  fetch has never actually succeeded - only the silent-failure path is
+  verified, now for the expected reason (missing file) rather than the
+  private-repo one.
 - No live write path for `circulating_fan.duty_cycle` - the Fan screen's
   Circulate sub-row is read-only pending this. Worth one check before
   treating this as permanent: `circulating_fan` is already in the socket's
@@ -312,29 +319,22 @@ short version:
   Take exact capability field names from `iprak/sensi` before adding them
   to the subscribe list, not from guesswork; confirm firmware is actually
   in the stream before promising that field specifically.
-- **Open UI decision, not yet made either way**: the shared header
-  currently reads "SensE-ink" on every screen (Home/Mode/Fan/Settings
-  alike), which was a deliberate early choice (app name instead of
-  per-page titles). Worth weighing against the fact that three screens
-  sharing an identical header carries no location information - Home is
-  the defensible case for it (root screen, gear icon for the one other
-  destination); Mode/Settings arguably aren't. Not changed without asking
-  first, since it reverses an explicit earlier decision.
-- Most recent commits (`734ea15` onward) are not yet pushed to
-  `origin/master` - confirm before assuming the remote is current.
+- **The entire 2026-09-02 batch (Kelvin decimal, per-screen headers, "just
+  now" wording, trailing-divider fix, dropped nav glyphs) has not yet been
+  verified on the physical Kompakt** - it wasn't connected during this
+  session. Do that before considering any of it done; everything before
+  this batch (through the Home/Mode/Fan/Settings redesign itself) was
+  verified on real hardware.
 
 ## Exact next action
 
-1. Decide the Kelvin fix (drop it vs. one-decimal display) and ship it -
-   highest priority, it's a defect on the app's most-used control.
-2. Decide `RemoteConfig`'s fate (public repo / public Gist / drop it)
-   before spending any more time on its "verify a real notice renders"
-   next-action item, which cannot succeed as the repo is configured now.
-3. Push `734ea15` (and anything after it) to `origin/master` once Chad
-   confirms.
-4. If picking UI work back up: align `SetupScreen`'s typography with the
-   rest of the app, per the redesign's scale; resolve the header-text
-   open decision above.
-5. If picking protocol work back up: check whether `circulating_fan` has
+1. Verify the 2026-09-02 batch on the physical Kompakt (see above) -
+   nothing in it is device-confirmed yet.
+2. Add `docs/config.json` to the repo (now that it's public, this is the
+   only remaining step for `RemoteConfig` to actually work) and verify a
+   real notice renders, not just the silent-failure path.
+3. If picking UI work back up: align `SetupScreen`'s typography with the
+   rest of the app, per the redesign's scale.
+4. If picking protocol work back up: check whether `circulating_fan` has
    a real write event before building one; if so, wire it up to make
    Fan's Circulate sub-row actually editable.
