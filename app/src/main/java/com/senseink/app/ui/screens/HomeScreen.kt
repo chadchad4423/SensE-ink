@@ -1,4 +1,4 @@
-package com.chad.sensieink.ui.screens
+package com.senseink.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,12 +31,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chad.sensieink.data.ConnectionStatus
-import com.chad.sensieink.data.FanSelection
-import com.chad.sensieink.data.OperatingMode
-import com.chad.sensieink.data.TemperatureUnit
-import com.chad.sensieink.data.ThermostatState
-import com.chad.sensieink.data.ThermostatUiState
+import com.senseink.app.data.ConnectionStatus
+import com.senseink.app.data.FanSelection
+import com.senseink.app.data.OperatingMode
+import com.senseink.app.data.TemperatureUnit
+import com.senseink.app.data.ThermostatState
+import com.senseink.app.data.ThermostatUiState
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import com.mudita.mmd.components.text.TextMMD
 import kotlinx.coroutines.delay
@@ -101,18 +102,20 @@ fun HomeScreen(
 
         HorizontalDividerMMD()
 
-        Row(
+        // No chevron/label needed here (2026-09-18: "you just click 'mode'
+        // below on the navbar") - the bottom nav bar is already the
+        // discoverable way to Mode, so this row's own tap shortcut doesn't
+        // need its own affordance; it's a convenience for people who
+        // already know it's there, not the only way in.
+        // bodyLarge (20sp) is the theme default TextMMD already falls back to
+        // when no size is given - matches ModeScreen/FanScreen's own row labels.
+        TextMMD(
+            text = "${modeLabel(thermostat.operatingMode)} · ${fanLabel(thermostat.fanSelection)}",
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onChangeModeFan)
                 .padding(vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            // bodyLarge (20sp) is the theme default TextMMD already falls back to
-            // when no size is given - matches ModeScreen/FanScreen's own row labels.
-            TextMMD(text = "${modeLabel(thermostat.operatingMode)} · ${fanLabel(thermostat.fanSelection)}")
-            TextMMD(text = "change", fontSize = 15.sp) // labelMedium
-        }
+        )
 
         FreshnessLine(lastUpdatedAtMillis = uiState.lastUpdatedAtMillis, disconnected = disconnected)
     }
@@ -172,7 +175,12 @@ private fun SetpointHero(
         localTapsF = null
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    // fillMaxWidth() matters here, not just CenterHorizontally: without it
+    // this Column wraps to its widest child's width and gets left-aligned
+    // by the outer screen Column (default Alignment.Start), so the hero
+    // number and +/- keys only ever centered relative to each other, not
+    // relative to the actual screen.
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         // No MMD role covers a hero display number (eInkTypography tops out
         // at headlineLarge, 28sp) - 60sp/Bold is this app's own established
         // hero treatment, unchanged from before this redesign.
@@ -186,7 +194,14 @@ private fun SetpointHero(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        // SpaceEvenly, not spacedBy (2026-09-18: "padding should be equal
+        // between sides and button, and between buttons") - fillMaxWidth so
+        // there's actually edge space for SpaceEvenly to distribute; it
+        // splits that into three equal gaps (edge-to-button, between the
+        // two buttons, button-to-edge) automatically, rather than a fixed
+        // dp value that would only happen to match the edge gap at one
+        // specific screen width.
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             SetpointKey(label = "−") { localTapsF = (localTapsF ?: displayedF) - 1 }
             SetpointKey(label = "+") { localTapsF = (localTapsF ?: displayedF) + 1 }
         }
@@ -231,44 +246,67 @@ private fun SetpointKey(label: String, onClick: () -> Unit) {
     }
 }
 
+// The taller of the two real states below (the "not connected" pill, with
+// its 8dp vertical padding on both sides) - reserved as a floor on the
+// wrapping Box regardless of which state (or neither, before the first
+// payload) is showing, so this slot's height never changes across states.
+// Before this, the null-lastUpdatedAtMillis case rendered nothing at all
+// (zero height) - and this Column sits between the two Modifier.weight(1f)
+// Spacers around SetpointHero above, so that zero-vs-real-height swing
+// changed how much space those Spacers got and visibly shifted the whole
+// hero number, not just this line (2026-09-18: "going from About to the
+// main page, everything jumps, I think when the 'updated....' line
+// prints").
+private val FreshnessLineMinHeight = 41.dp
+
 @Composable
 private fun FreshnessLine(lastUpdatedAtMillis: Long?, disconnected: Boolean) {
-    if (disconnected) {
-        // The one inverted element in the app, deliberately - a stale
-        // reading must be unmistakable without relying on color.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp)
-                .background(Color.Black, RoundedCornerShape(6.dp))
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TextMMD(text = "not connected", fontSize = 15.sp, color = Color.White) // labelMedium
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp)
+            .heightIn(min = FreshnessLineMinHeight),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        when {
+            disconnected -> {
+                // The one inverted element in the app, deliberately - a
+                // stale reading must be unmistakable without relying on
+                // color.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black, RoundedCornerShape(6.dp))
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TextMMD(text = "not connected", fontSize = 15.sp, color = Color.White) // labelMedium
+                }
+            }
+            lastUpdatedAtMillis != null -> {
+                // Recomputed on each new payload, then only at the coarse
+                // intervals needed to keep the under/over-60s wording
+                // correct - never a per-second tick, which would force a
+                // partial refresh every second.
+                var now by remember(lastUpdatedAtMillis) { mutableLongStateOf(System.currentTimeMillis()) }
+                LaunchedEffect(lastUpdatedAtMillis) {
+                    while (true) {
+                        val elapsedSec = (now - lastUpdatedAtMillis) / 1000
+                        val nextCheckMs = if (elapsedSec < 60) (60 - elapsedSec) * 1000 else 60_000
+                        delay(nextCheckMs)
+                        now = System.currentTimeMillis()
+                    }
+                }
+
+                TextMMD(
+                    text = "updated ${relativeAge(nowMillis = now, lastUpdatedAtMillis = lastUpdatedAtMillis)}",
+                    fontSize = 15.sp, // labelMedium
+                )
+            }
+            // else: no payload yet - slot stays reserved but empty, rather
+            // than absent.
         }
-        return
     }
-
-    if (lastUpdatedAtMillis == null) return
-
-    // Recomputed on each new payload, then only at the coarse intervals
-    // needed to keep the under/over-60s wording correct - never a
-    // per-second tick, which would force a partial refresh every second.
-    var now by remember(lastUpdatedAtMillis) { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(lastUpdatedAtMillis) {
-        while (true) {
-            val elapsedSec = (now - lastUpdatedAtMillis) / 1000
-            val nextCheckMs = if (elapsedSec < 60) (60 - elapsedSec) * 1000 else 60_000
-            delay(nextCheckMs)
-            now = System.currentTimeMillis()
-        }
-    }
-
-    TextMMD(
-        text = "updated ${relativeAge(nowMillis = now, lastUpdatedAtMillis = lastUpdatedAtMillis)}",
-        fontSize = 15.sp, // labelMedium
-        modifier = Modifier.padding(top = 10.dp),
-    )
 }
 
 private fun relativeAge(nowMillis: Long, lastUpdatedAtMillis: Long): String {

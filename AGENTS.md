@@ -3,7 +3,7 @@
 Status: Active
 Last verified: 2026-09-01
 Canonical location: `D:\Dev\AndroidStudioProjects\Sensi-eink\AGENTS.md`
-(`C:\Users\Chad\AndroidStudioProjects\Sensi-eink` is an NTFS junction to this
+(`%USERPROFILE%\AndroidStudioProjects\Sensi-eink` is an NTFS junction to this
 directory as of 2026-09-01's folder migration - same files either path)
 Secrets: None stored here — the harvested Sensi `refresh_token` lives only in
 the device's `EncryptedSharedPreferences` and this session's local scratchpad,
@@ -57,6 +57,6 @@ sessions; `PROJECT-STATUS.md` holds the exact current state and next action.
 ## Program context
 
 This repository is tracked in the shared e-ink Android program library at
-`C:\Users\Chad\rowdyram-ops\projects\eink-android\` (see that directory's
+`%USERPROFILE%\rowdyram-ops\projects\eink-android\` (see that directory's
 `README.md`, `CURRENT-STATE.md`, and `ROADMAP.md`). Update those when this
 project's status changes materially — not for routine commits.

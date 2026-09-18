@@ -1,4 +1,4 @@
-package com.chad.sensieink.data
+package com.senseink.app.data
 
 import io.socket.client.IO
 import io.socket.client.Socket

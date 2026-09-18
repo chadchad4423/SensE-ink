@@ -1,4 +1,4 @@
-package com.chad.sensieink.data
+package com.senseink.app.data
 
 import org.json.JSONObject
 

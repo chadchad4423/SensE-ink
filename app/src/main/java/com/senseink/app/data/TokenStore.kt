@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION") // androidx.security.crypto has no non-deprecated replacement yet.
 
-package com.chad.sensieink.data
+package com.senseink.app.data
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences

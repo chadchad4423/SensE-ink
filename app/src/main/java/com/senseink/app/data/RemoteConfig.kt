@@ -1,7 +1,7 @@
-package com.chad.sensieink.data
+package com.senseink.app.data
 
 import android.util.Log
-import com.chad.sensieink.BuildConfig
+import com.senseink.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient

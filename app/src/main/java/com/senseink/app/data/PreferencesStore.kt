@@ -1,4 +1,4 @@
-package com.chad.sensieink.data
+package com.senseink.app.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit

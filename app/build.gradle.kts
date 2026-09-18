@@ -24,19 +24,19 @@ val configUrl: String = localProperties.getProperty(
 )
 
 android {
-    namespace = "com.chad.sensieink"
+    namespace = "com.senseink.app"
 
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.chad.sensieink"
+        applicationId = "com.senseink.app"
         // Verified against the Mudita Kompakt (KompaktAudioProbe release notes): Android 12 / API 31.
         minSdk = 31
         targetSdk = 37
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -67,6 +67,12 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
+    // Only "tune" (Mode) and "air" (Fan) actually need this - "home" ships in
+    // -core. Pulled in for those two rather than hand-transcribing their
+    // vector path data, which risks a subtly wrong icon; no code shrinking
+    // is configured (see optimization.enable = false above), so this is a
+    // real APK-size tradeoff, accepted for the sake of correct icons.
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)

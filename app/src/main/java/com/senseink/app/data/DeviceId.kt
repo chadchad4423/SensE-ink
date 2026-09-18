@@ -1,4 +1,4 @@
-package com.chad.sensieink.data
+package com.senseink.app.data
 
 /**
  * Sensi identifies thermostats by the EUI-64 form of the device MAC: flip the

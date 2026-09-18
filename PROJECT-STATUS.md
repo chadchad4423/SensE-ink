@@ -3,16 +3,26 @@
 Status: Active — verified end-to-end on the physical Mudita Kompakt against the real thermostat
 Last verified: 2026-09-01
 Canonical location: `D:\Dev\AndroidStudioProjects\Sensi-eink\PROJECT-STATUS.md`
-(the project folder migrated here 2026-09-01; `C:\Users\Chad\AndroidStudioProjects\Sensi-eink`
+(the project folder migrated here 2026-09-01; `%USERPROFILE%\AndroidStudioProjects\Sensi-eink`
 is now an NTFS junction pointing at this directory, kept for backward-compat access -
 same underlying files either way, edit either path, but treat D: as the real one)
 Secrets: None stored here
 
 The app is branded **SensE-ink** as of `6b1dde7` (deliberately not "Sensi" -
-trademark concern raised and accepted by Chad). The repository folder,
-`applicationId` (`com.chad.sensieink`), and package name were deliberately
-**not** renamed to match - only the user-visible name changed
-(`R.string.app_name` and the launcher icon).
+a trademark concern was raised and accepted). The repository folder and
+package name were deliberately **not** renamed to match at the time -
+only the user-visible name changed (`R.string.app_name` and the launcher
+icon).
+
+**2026-09-18: the `applicationId`/package - previously `com.chad.sensieink`,
+a personal name baked into every source file's package declaration and the
+physical directory layout - was renamed to `com.senseink.app`** (no
+personal name anywhere in source, including file/directory naming). Since
+`applicationId` is Android's own app-identity key, this is **not**
+recognized as an update to whatever was installed under the old id -
+reinstalling requires re-pairing (see the Setup flow), same as if the
+device were wiped. The repository folder name and local NTFS junction
+path were left alone; this was a source-tree rename only.
 
 Repo has a GitHub remote as of 2026-09-01: `github.com/chadchad4423/SensE-ink`
 (note the actual repo name is `SensE-ink`, matching the app brand - not
@@ -95,8 +105,8 @@ more complete than this summary.
   an optional broadcast message or update nudge. Previously couldn't work
   at all - `raw.githubusercontent.com` 404s for private repos without an
   auth token, and GitHub Pages doesn't serve private repos on a free plan.
-  **Repo made public 2026-09-02 specifically to fix this** (Chad's call,
-  asked directly, over a public Gist or dropping the feature). The fetch
+  **Repo made public 2026-09-02 specifically to fix this** (a direct
+  decision, asked over a public Gist or dropping the feature). The fetch
   URL itself is still unverified end-to-end - `docs/config.json` doesn't
   exist in the repo yet, so it 404s for a different, expected reason now
   (missing file, not private-repo blocking) - only the silent-failure path
@@ -114,7 +124,7 @@ more complete than this summary.
   `C:\Program Files\Android\Android Studio\jbr`.
 - **Environment note (2026-09-01)**: this project has been worked on from at
   least two different machine/environment configurations this history - one
-  with the Android SDK at `C:\Users\Chad\AppData\Local\Android\Sdk`
+  with the Android SDK at `%USERPROFILE%\AppData\Local\Android\Sdk`
   (a real directory), another where that path is an NTFS junction to
   `D:\Android\Sdk` (which didn't exist - broken) and the real SDK was
   actually at `D:\Dev\Android\Sdk`. If a build fails with "SDK location not
@@ -127,7 +137,7 @@ more complete than this summary.
 
 Prompted by two rounds of feedback on the original "poster" Home layout
 (see below) - fonts too small/inconsistent, a redundant "Live" badge next
-to a separate absolute timestamp, and finally a full revision spec Chad
+to a separate absolute timestamp, and finally a full revision spec
 commissioned from an independent (separate, context-free) Claude session
 and forwarded here. That review's structural and interaction ideas were
 adopted; its specific type sizes/weights were not (see below). The source
@@ -265,7 +275,7 @@ short version:
   `aspectRatio(1f)`. **Prefer `aspectRatio` over a fixed `.size()`** for
   anything that must render as a specific shape.
 
-## Resolved 2026-09-02 (asked directly, Chad's calls)
+## Resolved 2026-09-02 (asked directly, product decisions)
 
 Three items from the post-review analysis needed a product decision, not
 just a code fix. All three are now decided and shipped:
@@ -325,6 +335,21 @@ choice made at rebrand time) - don't conflate the two again.
   session. Do that before considering any of it done; everything before
   this batch (through the Home/Mode/Fan/Settings redesign itself) was
   verified on real hardware.
+- **The real HVAC system behind the test unit is a heat pump with
+  auxiliary heat** (confirmed directly, 2026-09-18) - this
+  conflicts with `sensi-client-spec.md` §2's hardware table, which
+  documents the live payload as reporting single-stage electric heat /
+  single-stage AC, and with the "single-stage on both sides, don't
+  implement two-stage handling" instruction that table's finding
+  justified. Aux heat has never knowingly been exercised against this
+  app. Next time connected: check `indoor_stages`/`outdoor_stages` and
+  the equipment/mode fields in the live payload for anything indicating
+  heat-pump or aux-heat state (a second stage, a distinct mode/equipment
+  value, etc.) rather than assuming the existing single-stage
+  characterization still holds. Until that's checked, treat Mode-screen
+  accuracy during aux-heat operation as unverified, not just theoretically
+  incomplete - see the equivalent caveat added to `README.md`'s
+  Compatibility section.
 
 ## Exact next action
 
