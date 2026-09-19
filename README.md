@@ -105,3 +105,31 @@ hand the resulting token back to this device.
 
 See `AGENTS.md` and `PROJECT-STATUS.md` for build requirements, target
 device details, and the project's current state if you're contributing.
+
+## Acknowledgements
+
+Sensi's cloud protocol (OAuth token exchange, the socket.io realtime
+channel, the device capabilities string) was never officially documented.
+Understanding it here started from reading these prior reverse-engineering
+projects rather than probing the API blind:
+
+- [**iprak/sensi**](https://github.com/iprak/sensi) (MIT, © 2022 Indu
+  Prakash) - the most complete existing client; a Home Assistant
+  integration using python-socketio. The closest match for how this app's
+  OAuth/refresh-token handling and realtime channel are structured.
+- [**w1ll1am23/pysensi**](https://github.com/w1ll1am23/pysensi) (MIT,
+  © 2016 William Scanlon) - the original reverse engineering of the Sensi
+  API; source of the device capabilities string this app parses.
+- [**kitradrago/homebridge-sensi**](https://github.com/kitradrago/homebridge-sensi)
+  (MIT, © 2025 Kitra Drago) - a HomeKit bridge that itself credits
+  `iprak/sensi` for its API code; useful as a second, TypeScript
+  implementation to check the Kotlin port against.
+
+This app also depends on [**Mudita MMD**](https://github.com/mudita/MMD)
+(Apache License 2.0), Mudita's own UI component library, required by the
+Kompakt e-ink platform this app targets.
+
+No code was copied from any of the above - this is a from-scratch Kotlin
+implementation - but the protocol understanding they document directly
+shaped how this app talks to Sensi's API, and that debt is worth naming
+explicitly. Full license texts: [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
