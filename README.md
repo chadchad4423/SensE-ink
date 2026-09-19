@@ -19,6 +19,14 @@ Deliberately out of scope: scheduling, geofencing, usage reports, alerts,
 push notifications, multi-thermostat support, remote sensors. See
 `sensi-client-spec.md` for the full build spec.
 
+## Screenshots
+
+| Home | Mode | Fan | About |
+|---|---|---|---|
+| ![Home screen](docs/screenshots/home.png) | ![Mode screen](docs/screenshots/mode.png) | ![Fan screen](docs/screenshots/fan.png) | ![About screen](docs/screenshots/about.png) |
+
+(Home/Mode/Fan shown with representative data, not a live thermostat.)
+
 ## Thermostat compatibility
 
 Built and verified end-to-end against a **Sensi ST55** (1F87U-42WF
