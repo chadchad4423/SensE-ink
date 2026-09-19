@@ -21,15 +21,20 @@ push notifications, multi-thermostat support, remote sensors. See
 
 ## Screenshots
 
-<!-- Explicit width= on each <img>, not plain markdown image syntax - GitHub's
-     table auto-layout sizes columns partly off the header text's own width,
-     and "Fan" (3 chars) was getting a visibly narrower column - and so a
-     visibly smaller rendered image - than "Home"/"Mode"/"About" despite all
-     four screenshots being pixel-identical (480x800) source files. A fixed
-     width pins every image to the same rendered size regardless of that. -->
-| Home | Mode | Fan | About |
-|---|---|---|---|
-| <img src="docs/screenshots/home.png" width="200" alt="Home screen"> | <img src="docs/screenshots/mode.png" width="200" alt="Mode screen"> | <img src="docs/screenshots/fan.png" width="200" alt="Fan screen"> | <img src="docs/screenshots/about.png" width="200" alt="About screen"> |
+<!-- Not a markdown table - GitHub's table auto-layout sizes each column
+     partly off its own header text width, so "Fan" (3 chars) got a
+     narrower column - and so a visibly smaller rendered image - than
+     "Home"/"Mode"/"About" despite all four screenshots being
+     pixel-identical (480x800) source files. Even an explicit width= on
+     the <img> didn't override it, since max-width:100% still shrinks the
+     image to fit whatever narrow column the table produced. Plain inline
+     images side by side aren't subject to that at all. -->
+<p align="center">
+<img src="docs/screenshots/home.png" width="200" alt="Home screen">
+<img src="docs/screenshots/mode.png" width="200" alt="Mode screen">
+<img src="docs/screenshots/fan.png" width="200" alt="Fan screen">
+<img src="docs/screenshots/about.png" width="200" alt="About screen">
+</p>
 
 (Home/Mode/Fan shown with representative data, not a live thermostat.)
 
