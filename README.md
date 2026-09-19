@@ -21,9 +21,15 @@ push notifications, multi-thermostat support, remote sensors. See
 
 ## Screenshots
 
+<!-- Explicit width= on each <img>, not plain markdown image syntax - GitHub's
+     table auto-layout sizes columns partly off the header text's own width,
+     and "Fan" (3 chars) was getting a visibly narrower column - and so a
+     visibly smaller rendered image - than "Home"/"Mode"/"About" despite all
+     four screenshots being pixel-identical (480x800) source files. A fixed
+     width pins every image to the same rendered size regardless of that. -->
 | Home | Mode | Fan | About |
 |---|---|---|---|
-| ![Home screen](docs/screenshots/home.png) | ![Mode screen](docs/screenshots/mode.png) | ![Fan screen](docs/screenshots/fan.png) | ![About screen](docs/screenshots/about.png) |
+| <img src="docs/screenshots/home.png" width="200" alt="Home screen"> | <img src="docs/screenshots/mode.png" width="200" alt="Mode screen"> | <img src="docs/screenshots/fan.png" width="200" alt="Fan screen"> | <img src="docs/screenshots/about.png" width="200" alt="About screen"> |
 
 (Home/Mode/Fan shown with representative data, not a live thermostat.)
 
